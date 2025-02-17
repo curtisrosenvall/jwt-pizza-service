@@ -71,9 +71,9 @@ describe('Order Router', () => {
         .send(newMenuItem);
     }
 
-    const updatedMenuRes = await request(app)
-      .get('/api/order/menu');
-    menuItem = updatedMenuRes.body[0];
+    // const updatedMenuRes = await request(app)
+    //   .get('/api/order/menu');
+    // menuItem = updatedMenuRes.body[0];
 
     // Add a slight delay to ensure all DB operations are complete
     await new Promise(resolve => setTimeout(resolve, 500));
