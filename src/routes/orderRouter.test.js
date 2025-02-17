@@ -1,5 +1,6 @@
 const request = require('supertest');
 const app = require('../service');
+const config = require('../config');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 const adminUser = { email: 'a@jwt.com', password: 'admin' };

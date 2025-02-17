@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('../service');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-const adminUser = { email: 'admin@test.com', password: 'admin' };
 const franchiseAdmin = { name: 'franchise admin', email: 'franchise@test.com', password: 'pass' };
 
 let testUserAuthToken;
