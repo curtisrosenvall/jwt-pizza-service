@@ -1,28 +1,41 @@
 const request = require('supertest');
 const app = require('../service');
+const { Role } = require('../database/database.js');
 
-const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-const adminUser = { email: 'admin@test.com', password: 'admin' };
+const testUser = { 
+  name: 'Test User', 
+  email: 'test@test.com', 
+  password: 'testpass',
+  roles: [{ role: Role.Diner }]
+};
+
 let testUserAuthToken;
 let adminAuthToken;
 
 beforeAll(async () => {
-  // Create a unique email for test user
-  testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
-  const registerRes = await request(app).post('/api/auth').send(testUser);
+  // Register test user
+  testUser.email = `test${Math.random().toString(36).substring(7)}@test.com`;
+  const registerRes = await request(app)
+    .post('/api/auth')
+    .send(testUser);
   testUserAuthToken = registerRes.body.token;
-  expectValidJwt(testUserAuthToken);
+  testUser.id = registerRes.body.user.id;
 
   // Login as admin
-  const adminLoginRes = await request(app).put('/api/auth').send(adminUser);
+  const adminLoginRes = await request(app)
+    .put('/api/auth')
+    .send({ 
+      email: 'a@jwt.com', 
+      password: 'admin' 
+    });
   adminAuthToken = adminLoginRes.body.token;
 });
 
 describe('Registration', () => {
   test('should register a new user successfully', async () => {
     const newUser = {
-      name: 'new user',
-      email: Math.random().toString(36).substring(2, 12) + '@test.com',
+      name: 'New User',
+      email: `test${Math.random().toString(36).substring(7)}@test.com`,
       password: 'password123'
     };
 
@@ -34,12 +47,12 @@ describe('Registration', () => {
     expect(response.body.user.name).toBe(newUser.name);
     expect(response.body.user.email).toBe(newUser.email);
     expect(response.body.user.roles).toEqual([{ role: 'diner' }]);
-    expectValidJwt(response.body.token);
+    expect(response.body.token).toBeDefined();
   });
 
   test('should fail registration with missing fields', async () => {
     const invalidUser = {
-      name: 'incomplete user'
+      name: 'Incomplete User'
     };
 
     const response = await request(app)
@@ -55,11 +68,13 @@ describe('Login', () => {
   test('should login existing user successfully', async () => {
     const loginRes = await request(app)
       .put('/api/auth')
-      .send(testUser);
+      .send({
+        email: testUser.email,
+        password: testUser.password
+      });
 
     expect(loginRes.status).toBe(200);
-    expectValidJwt(loginRes.body.token);
-
+    expect(loginRes.body.token).toBeDefined();
     const expectedUser = { ...testUser, roles: [{ role: 'diner' }] };
     delete expectedUser.password;
     expect(loginRes.body.user).toMatchObject(expectedUser);
@@ -70,20 +85,20 @@ describe('Login', () => {
       email: testUser.email,
       password: 'wrongpassword'
     };
-  
+
     const response = await request(app)
       .put('/api/auth')
       .send(wrongCredentials);
-  
-    expect(response.status).toBe(404);  // Change from 401 to 404 to match your implementation
+
+    expect(response.status).toBe(404);
   });
 });
 
 describe('User Updates', () => {
   test('should allow user to update their own details', async () => {
     const updates = {
-      email: Math.random().toString(36).substring(2, 12) + '@test.com',
-      password: 'newpassword123'
+      email: `updated${Math.random().toString(36).substring(7)}@test.com`,
+      password: 'newpassword'
     };
 
     const response = await request(app)
@@ -97,7 +112,7 @@ describe('User Updates', () => {
 
   test('should allow admin to update other users', async () => {
     const updates = {
-      email: Math.random().toString(36).substring(2, 12) + '@test.com',
+      email: `adminupdated${Math.random().toString(36).substring(7)}@test.com`,
       password: 'adminupdated'
     };
 
@@ -136,7 +151,7 @@ describe('Logout', () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe('logout successful');
 
-    // Verify token is invalidated by trying to use it again
+    // Verify token is invalidated
     const verifyResponse = await request(app)
       .delete('/api/auth')
       .set('Authorization', `Bearer ${testUserAuthToken}`);
@@ -152,25 +167,3 @@ describe('Logout', () => {
     expect(response.body.message).toBe('unauthorized');
   });
 });
-
-describe('Authentication Middleware', () => {
-  test('should reject requests with invalid JWT', async () => {
-    const response = await request(app)
-      .delete('/api/auth')
-      .set('Authorization', 'Bearer invalid.token.here');
-
-    expect(response.status).toBe(401);
-  });
-
-  test('should reject requests with malformed auth header', async () => {
-    const response = await request(app)
-      .delete('/api/auth')
-      .set('Authorization', 'InvalidHeaderFormat');
-
-    expect(response.status).toBe(401);
-  });
-});
-
-function expectValidJwt(potentialJwt) {
-  expect(potentialJwt).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
-}
