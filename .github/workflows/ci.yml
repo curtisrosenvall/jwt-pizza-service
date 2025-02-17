@@ -5,12 +5,25 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.29
+        env:
+          MYSQL_ROOT_PASSWORD: theHood1335!
+          MYSQL_DATABASE: pizza
+        ports:
+          - '3306:3306'
+        options: >-
+          --health-cmd "mysqladmin ping -ptheHood1335!" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+    
     outputs:
       version: ${{ steps.set_version.outputs.version }}
+    
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,5 +36,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Write config file
+        run: |
+          echo "module.exports = {
+            jwtSecret: '${{ secrets.JWT_SECRET }}',
+            db: {
+              connection: {
+                host: '127.0.0.1',
+                user: 'root',
+                password: 'theHood1335!',
+                database: 'pizza',
+                connectTimeout: 60000,
+              },
+              listPerPage: 10,
+            },
+            factory: {
+              url: 'https://pizza-factory.cs329.click',
+              apiKey: '${{ secrets.FACTORY_API_KEY }}',
+            },
+          };" > src/config.js
+
       - name: Lint
         run: npm run lint
+        
+      - name: Tests
+        run: npm test
