@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('../service');
 const { Role } = require('../database/database.js');
-const config = require('../config');
+// const config = require('../config');
 
 describe('Order Router', () => {
   let testUser;
@@ -9,7 +9,7 @@ describe('Order Router', () => {
   let testUserToken;
   let testFranchise;
   let testStore;
-  let menuItem;
+//   let menuItem;
 
   beforeAll(async () => {
     // Wait a bit for database initialization
