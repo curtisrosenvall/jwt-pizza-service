@@ -1,12 +1,13 @@
 {
-    "collectCoverage": true,
-    "coverageReporters": ["json-summary", "text"],
-    "coverageThreshold": {
-      "global": {
-        "lines": 80
-      }
-    },
-    "testTimeout": 30000,
-    "setupFilesAfterEnv": ["./jest.setup.js"],
-    "testEnvironment": "node"
-  }
+  "collectCoverage": true,
+  "coverageReporters": ["json-summary", "text"],
+  "coverageThreshold": {
+    "global": {
+      "lines": 80
+    }
+  },
+  "globalSetup": "/Users/curtisrosenvall/Desktop/BYU/CS329/jwt-pizza-service/globalSetup.js",
+  "globalTeardown": "/Users/curtisrosenvall/Desktop/BYU/CS329/jwt-pizza-service/globalTeardown.js",
+  "runInBand": true,
+  "testTimeout": 30000
+}
