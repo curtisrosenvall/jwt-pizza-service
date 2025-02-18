@@ -16,10 +16,15 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: theHood1335!
           MYSQL_DATABASE: pizza
+          MYSQL_ROOT_HOST: '%'
         ports:
           - '3306:3306'
         options: >-
-          --health-cmd "mysqladmin ping -ptheHood1335!" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+          --health-cmd="mysqladmin ping -ptheHood1335!"
+          --health-interval=20s
+          --health-timeout=10s
+          --health-retries=10
+          --health-start-period=30s
     
     outputs:
       version: ${{ steps.set_version.outputs.version }}
@@ -36,6 +41,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Wait for MySQL
+        run: |
+          while ! mysql -h"127.0.0.1" -P"3306" -uroot -p"theHood1335!" -e "SELECT 1" >/dev/null 2>&1; do
+            echo "Waiting for MySQL to be ready..."
+            sleep 2
+          done
+          echo "MySQL is ready"
+
       - name: Write config file
         run: |
           echo "module.exports = {
@@ -47,6 +60,7 @@ jobs:
                 password: 'theHood1335!',
                 database: 'pizza',
                 connectTimeout: 60000,
+                charset: 'utf8mb4'
               },
               listPerPage: 10,
             },
@@ -60,4 +74,9 @@ jobs:
         run: npm run lint
         
       - name: Tests
-        run: npm test
+        run: |
+          # Wait a bit for any pending operations
+          sleep 5
+          npm test
+        env:
+          CI: true

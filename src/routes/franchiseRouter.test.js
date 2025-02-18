@@ -10,65 +10,85 @@ describe('Franchise Router', () => {
   let testFranchise;
 
   beforeAll(async () => {
-
-    try{
-      // Wait for DB initialization
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Create unique test users
-    const uniqueId = Math.random().toString(36).substring(7);
-
-    // Create and login as admin
-    const adminRes = await request(app)
-      .put('/api/auth')
-      .send({
-        email: 'a@jwt.com',
-        password: 'admin'
-      });
-    adminToken = adminRes.body.token;
-
-    // Register test user
-    testUser = {
-      name: 'Test User',
-      email: `test${uniqueId}@test.com`,
-      password: 'testpass',
-      roles: [{ role: Role.Diner }]
-    };
-    const testUserRes = await request(app)
-      .post('/api/auth')
-      .send(testUser);
-    testUserToken = testUserRes.body.token;
-    testUser.id = testUserRes.body.user.id;
-
-    // Create and register franchise admin
-    const franchiseAdmin = {
-      name: 'Franchise Admin',
-      email: `franchise${uniqueId}@test.com`,
-      password: 'adminpass',
-      roles: [{ role: Role.Diner }]
-    };
-    const franchiseAdminRes = await request(app)
-      .post('/api/auth')
-      .send(franchiseAdmin);
-    franchiseAdminToken = franchiseAdminRes.body.token;
-
-    // Create initial test franchise using admin token
-    const franchiseRes = await request(app)
-      .post('/api/franchise')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({
-        name: `Test Franchise ${uniqueId}`,
-        admins: [{ email: franchiseAdmin.email }]
-      });
-    testFranchise = franchiseRes.body;
-
-    // Wait for all operations to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
-    } catch  (error){
+    // Wait for database initialization
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  
+    try {
+      // Login as admin first
+      const adminLoginRes = await request(app)
+        .put('/api/auth')
+        .send({
+          email: 'a@jwt.com',
+          password: 'admin'
+        });
+      
+      adminToken = adminLoginRes.body.token;
+      await waitForAuth(adminToken);
+  
+      // Create test user
+      testUser = {
+        name: 'Test User',
+        email: `test${Math.random().toString(36).substring(7)}@test.com`,
+        password: 'testpass'
+      };
+  
+      const registerRes = await request(app)
+        .post('/api/auth')
+        .send(testUser);
+      testUserToken = registerRes.body.token;
+      testUser.id = registerRes.body.user.id;
+      await waitForAuth(testUserToken);
+  
+      // Create and register franchise admin
+      franchiseAdmin = {
+        name: 'Franchise Admin',
+        email: `franchise${Math.random().toString(36).substring(7)}@test.com`,
+        password: 'franchisepass'
+      };
+  
+      const franchiseAdminRes = await request(app)
+        .post('/api/auth')
+        .send(franchiseAdmin);
+      franchiseAdminToken = franchiseAdminRes.body.token;
+      franchiseAdmin.id = franchiseAdminRes.body.user.id;
+      await waitForAuth(franchiseAdminToken);
+  
+      // Create test franchise
+      const franchiseRes = await request(app)
+        .post('/api/franchise')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: `Test Franchise ${Math.random().toString(36).substring(7)}`,
+          admins: [{ email: franchiseAdmin.email }]
+        });
+      testFranchise = franchiseRes.body;
+  
+      // Add delay to ensure all operations are complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
       console.error('Setup error:', error);
       throw error;
     }
   });
+
+  const waitForAuth = async (token) => {
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        const testResponse = await request(app)
+          .get('/api/franchise')
+          .set('Authorization', `Bearer ${token}`);
+        if (testResponse.status !== 401) {
+          return;
+        }
+      } catch (error) {
+        console.log('Auth check failed, retrying...');
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
+    throw new Error('Auth setup failed');
+  };
 
   describe('Get Franchises', () => {
     test('should list all franchises without auth', async () => {
@@ -200,23 +220,22 @@ describe('Franchise Router', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
     try {
-      const stores = await request(app)
-        .get(`/api/franchise/${testFranchise.id}`)
-        .set('Authorization', `Bearer ${adminToken}`);
-
-      if (stores.body && stores.body.stores) {
-        for (const store of stores.body.stores) {
-          await request(app)
-            .delete(`/api/franchise/${testFranchise.id}/store/${store.id}`)
-            .set('Authorization', `Bearer ${adminToken}`);
-        }
-      }
-
+      // Clean up in reverse order
       await request(app)
-        .delete(`/api/franchise/${testFranchise.id}`)
+        .delete(`/api/auth`)
+        .set('Authorization', `Bearer ${testUserToken}`);
+      
+      await request(app)
+        .delete(`/api/auth`)
+        .set('Authorization', `Bearer ${franchiseAdminToken}`);
+      
+      await request(app)
+        .delete(`/api/auth`)
         .set('Authorization', `Bearer ${adminToken}`);
+  
+      // Wait for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error('Cleanup error:', error);
     }
