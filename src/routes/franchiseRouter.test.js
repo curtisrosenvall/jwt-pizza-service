@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../service');
-const { Role } = require('../database/database.js');
+// const { Role } = require('../database/database.js');
 
 describe('Franchise Router', () => {
   let testUser;
@@ -40,7 +40,7 @@ describe('Franchise Router', () => {
       await waitForAuth(testUserToken);
   
       // Create and register franchise admin
-      franchiseAdmin = {
+    const  franchiseAdmin = {
         name: 'Franchise Admin',
         email: `franchise${Math.random().toString(36).substring(7)}@test.com`,
         password: 'franchisepass'
@@ -81,8 +81,9 @@ describe('Franchise Router', () => {
         if (testResponse.status !== 401) {
           return;
         }
-      } catch (error) {
-        console.log('Auth check failed, retrying...');
+        console.log('Auth check failed, status:', testResponse.status);
+      } catch (err) {  // Changed 'error' to 'err' since we're using it
+        console.log('Auth check failed:', err.message);
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
       attempts++;
