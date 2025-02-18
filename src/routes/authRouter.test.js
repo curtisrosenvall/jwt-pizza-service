@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../service');
-const { Role } = require('../database/database.js');
+// const { Role } = require('../database/database.js');
 
 describe('Auth Router', () => {
   let testUser;
