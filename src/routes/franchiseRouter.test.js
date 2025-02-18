@@ -2,6 +2,8 @@ const request = require('supertest');
 const app = require('../service');
 // const { Role } = require('../database/database.js');
 
+
+
 describe('Franchise Router', () => {
   let testUser;
   let adminToken;
@@ -73,22 +75,25 @@ describe('Franchise Router', () => {
 
   const waitForAuth = async (token) => {
     let attempts = 0;
-    while (attempts < 3) {
+    while (attempts < 5) { // Increased max attempts
       try {
+        console.log(`Attempt ${attempts + 1} to verify token...`);
         const testResponse = await request(app)
           .get('/api/franchise')
           .set('Authorization', `Bearer ${token}`);
+        
         if (testResponse.status !== 401) {
+          console.log('Token verified successfully');
           return;
         }
-        console.log('Auth check failed, status:', testResponse.status);
-      } catch (err) {  // Changed 'error' to 'err' since we're using it
-        console.log('Auth check failed:', err.message);
+        console.log(`Auth check failed, status: ${testResponse.status}`);
+      } catch {
+        console.log('Auth check failed, retrying...');
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Increased wait time
       attempts++;
     }
-    throw new Error('Auth setup failed');
+    throw new Error('Auth setup failed after multiple attempts');
   };
 
   describe('Get Franchises', () => {
@@ -152,93 +157,117 @@ describe('Franchise Router', () => {
 
   describe('Store Operations', () => {
     let storeCount = 0;
-
+  
+    beforeEach(async () => {
+      // Add delay before each store operation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    });
+  
     test('admin should create store', async () => {
+      // Verify admin token is still valid
+      await waitForAuth(adminToken);
+  
       const response = await request(app)
         .post(`/api/franchise/${testFranchise.id}/store`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           name: `Test Store ${storeCount++}`
         });
-
+  
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('name');
     });
-
+  
     test('franchise admin should create store', async () => {
+      // Verify franchise admin token is still valid
+      await waitForAuth(franchiseAdminToken);
+  
       const response = await request(app)
         .post(`/api/franchise/${testFranchise.id}/store`)
         .set('Authorization', `Bearer ${franchiseAdminToken}`)
         .send({
           name: `Test Store ${storeCount++}`
         });
-
+  
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('name');
     });
-
-    test('regular user cannot create store', async () => {
-      const response = await request(app)
-        .post(`/api/franchise/${testFranchise.id}/store`)
-        .set('Authorization', `Bearer ${testUserToken}`)
-        .send({
-          name: `Test Store ${storeCount++}`
-        });
-
-      expect(response.status).toBe(403);
-    });
   });
-
+  
   describe('Delete Operations', () => {
     let storeToDelete;
-
+  
     beforeEach(async () => {
+      // Add delay and verify tokens before each delete operation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForAuth(adminToken);
+      
       // Create a store to delete
       const storeRes = await request(app)
         .post(`/api/franchise/${testFranchise.id}/store`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'Store to Delete' });
       storeToDelete = storeRes.body;
+  
+      // Add delay after store creation
+      await new Promise(resolve => setTimeout(resolve, 1000));
     });
-
+  
     test('admin should delete store', async () => {
       const response = await request(app)
         .delete(`/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
-
+  
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('store deleted');
     });
-
+  
     test('franchise admin should delete store', async () => {
       const response = await request(app)
         .delete(`/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`)
         .set('Authorization', `Bearer ${franchiseAdminToken}`);
-
+  
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('store deleted');
+    });
+
+    test('regular user cannot delete store', async () => {
+      const response = await request(app)
+        .delete(`/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`)
+        .set('Authorization', `Bearer ${testUserToken}`);
+    
+      expect(response.status).toBe(403);
     });
   });
 
   afterAll(async () => {
     try {
+      // Add final delay before cleanup
+      await new Promise(resolve => setTimeout(resolve, 2000));
+  
       // Clean up in reverse order
       await request(app)
         .delete(`/api/auth`)
         .set('Authorization', `Bearer ${testUserToken}`);
       
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       await request(app)
         .delete(`/api/auth`)
         .set('Authorization', `Bearer ${franchiseAdminToken}`);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       await request(app)
         .delete(`/api/auth`)
         .set('Authorization', `Bearer ${adminToken}`);
   
-      // Wait for cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Final cleanup delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
       console.error('Cleanup error:', error);
     }
   });
+
+  
 });

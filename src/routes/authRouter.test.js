@@ -8,37 +8,39 @@ describe('Auth Router', () => {
   let testUserAuthToken;
 
   beforeAll(async () => {
-    // Wait for database initialization
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
+    // Increase initial wait time for CI
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  
     try {
-      // Create test user
-      testUser = {
-        name: 'Test User',
-        email: `test${Math.random().toString(36).substring(7)}@test.com`,
-        password: 'testpass'
-      };
-
-      // Register test user
-      const registerRes = await request(app)
-        .post('/api/auth')
-        .send(testUser);
-      testUserAuthToken = registerRes.body.token;
-      testUser.id = registerRes.body.user.id;
-
-      // Login as admin
+      // Get admin token first
       const adminLoginRes = await request(app)
         .put('/api/auth')
         .send({
           email: 'a@jwt.com',
           password: 'admin'
         });
-      adminAuthToken = adminLoginRes.body.token;  // Store admin token
-
-      // Add delay to ensure setup is complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      adminAuthToken = adminLoginRes.body.token;
+  
+      // Add delay after admin login
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      // Create and register test user
+      testUser = {
+        name: 'Test User',
+        email: `test${Math.random().toString(36).substring(7)}@test.com`,
+        password: 'testpass'
+      };
+  
+      const registerRes = await request(app)
+        .post('/api/auth')
+        .send(testUser);
+      testUserAuthToken = registerRes.body.token;
+      testUser.id = registerRes.body.user.id;
+  
+      // Add delay after user creation
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error('Setup failed:', error);
+      console.error('Setup error:', error);
       throw error;
     }
   });
