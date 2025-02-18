@@ -309,6 +309,7 @@ class DB {
       user: config.db.connection.user,
       password: config.db.connection.password,
       connectTimeout: config.db.connection.connectTimeout,
+      charset: 'utf8mb4',
       decimalNumbers: true,
     });
     if (setUse) {
@@ -318,38 +319,58 @@ class DB {
   }
 
   async initializeDatabase() {
+    let connection;
     try {
-      const connection = await this._getConnection(false);
-      try {
-        const dbExists = await this.checkDatabaseExists(connection);
-        console.log(dbExists ? 'Database exists' : 'Database does not exist, creating it');
-
-        await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.db.connection.database}`);
-        await connection.query(`USE ${config.db.connection.database}`);
-
-        if (!dbExists) {
-          console.log('Successfully created database');
-        }
-
-        for (const statement of dbModel.tableCreateStatements) {
-          await connection.query(statement);
-        }
-
-        if (!dbExists) {
-          const defaultAdmin = { name: '常用名字', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] };
-          this.addUser(defaultAdmin);
-        }
-      } finally {
-        connection.end();
+      connection = await this._getConnection(false);
+      const dbExists = await this.checkDatabaseExists(connection);
+      console.log(dbExists ? 'Database exists' : 'Database does not exist, creating it');
+  
+      await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.db.connection.database}`);
+      await connection.query(`USE ${config.db.connection.database}`);
+  
+      if (!dbExists) {
+        console.log('Successfully created database');
+      }
+  
+      for (const statement of dbModel.tableCreateStatements) {
+        await connection.query(statement);
+      }
+  
+      if (!dbExists) {
+        const defaultAdmin = { 
+          name: '常用名字', 
+          email: 'a@jwt.com', 
+          password: 'admin', 
+          roles: [{ role: Role.Admin }] 
+        };
+        await this.addUser(defaultAdmin); // Add await here
       }
     } catch (err) {
-      console.error(JSON.stringify({ message: 'Error initializing database', exception: err.message, connection: config.db.connection }));
+      console.error(JSON.stringify({ 
+        message: 'Error initializing database', 
+        exception: err.message, 
+        connection: config.db.connection 
+      }));
+      throw err; // Re-throw the error
+    } finally {
+      if (connection) {
+        await connection.end();
+      }
     }
   }
 
   async checkDatabaseExists(connection) {
     const [rows] = await connection.execute(`SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`, [config.db.connection.database]);
     return rows.length > 0;
+  }
+
+  async cleanup() {
+    try {
+      const connection = await this._getConnection();
+      await connection.end();
+    } catch (error) {
+      console.error('Cleanup error:', error);
+    }
   }
 }
 

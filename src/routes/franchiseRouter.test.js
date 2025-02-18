@@ -10,7 +10,9 @@ describe('Franchise Router', () => {
   let testFranchise;
 
   beforeAll(async () => {
-    // Wait for DB initialization
+
+    try{
+      // Wait for DB initialization
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Create unique test users
@@ -62,6 +64,10 @@ describe('Franchise Router', () => {
 
     // Wait for all operations to complete
     await new Promise(resolve => setTimeout(resolve, 500));
+    } catch  (error){
+      console.error('Setup error:', error);
+      throw error;
+    }
   });
 
   describe('Get Franchises', () => {
