@@ -6,8 +6,7 @@
       "lines": 80
     }
   },
-  "globalSetup": "/Users/curtisrosenvall/Desktop/BYU/CS329/jwt-pizza-service/globalSetup.js",
-  "globalTeardown": "/Users/curtisrosenvall/Desktop/BYU/CS329/jwt-pizza-service/globalTeardown.js",
-  "runInBand": true,
+  "globalSetup": "./globalSetup.js",
+  "globalTeardown": "./globalTeardown.js",
   "testTimeout": 30000
 }
