@@ -74,7 +74,7 @@ jest.setTimeout(30000);
 
 describe('Order Router', () => {
   let adminToken;
-  let adminUser;
+//   let adminUser;
   let dinerToken;
   let dinerUser;
 

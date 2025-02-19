@@ -7,7 +7,7 @@
 
 const request = require('supertest');
 const app = require('../service');
-const { DB, Role } = require('../database/database.js');
+// const { DB, Role } = require('../database/database.js');
 
 /**
  * Optional utility: generate a random name for your test objects
@@ -59,16 +59,16 @@ async function registerDinerUser() {
 /**
  * Login a user, returning { token, user } 
  */
-async function loginUser(email, password) {
-  const res = await request(app)
-    .put('/api/auth')
-    .send({ email, password });
-  return { status: res.status, body: res.body };
-}
+// async function loginUser(email, password) {
+//   const res = await request(app)
+//     .put('/api/auth')
+//     .send({ email, password });
+//   return { status: res.status, body: res.body };
+// }
 
 describe('Franchise Router', () => {
   let adminToken;
-  let adminUserId;
+//   let adminUserId;
 
   let dinerUser;       // normal user object
   let dinerToken;      // normal user's token

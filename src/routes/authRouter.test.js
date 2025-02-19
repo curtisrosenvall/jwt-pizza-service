@@ -56,8 +56,8 @@ describe('Auth Router', () => {
 
   // We’ll also test an admin user for the update route.
   let adminUser;
-  let adminToken;
-  let adminId;
+//   let adminToken;
+//   let adminId;
 
   //
   // ---------------------------------------------
