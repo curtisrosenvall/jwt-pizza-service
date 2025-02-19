@@ -26,12 +26,22 @@ jobs:
           --health-retries=10
           --health-start-period=30s
     
+    # We'll capture the 'version' output from the "set_version" step, if you want to reuse it later
     outputs:
       version: ${{ steps.set_version.outputs.version }}
-    
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      # 1) Set version
+      - name: set version
+        id: set_version
+        run: |
+          version=$(date +'%Y%m%d.%H%M%S')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          printf '{"version": "%s"}' "$version" > src/version.json
+          echo "Set version to $version"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -72,11 +82,26 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        
-      - name: Tests
+
+      - name: Run tests (with coverage)
         run: |
-          # Wait a bit for any pending operations
+          # Optionally wait a bit if needed
           sleep 5
-          npm test
+          npm run test:coverage
         env:
           CI: true
+
+      # 2) Post coverage badge
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Update coverage
+        if: always()  # so it runs even if tests fail
+        run: |
+          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          echo "Coverage is $coverage%"
+          color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
+          curl -s -X POST "https://badge.cs329.click/badge/${{ github.repository_owner }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" \
+            -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
