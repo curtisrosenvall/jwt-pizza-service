@@ -5,43 +5,27 @@ on:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
     services:
       mysql:
         image: mysql:8.0.29
         env:
-          MYSQL_ROOT_PASSWORD: theHood1335!
+          MYSQL_ROOT_PASSWORD: tempdbpassword
           MYSQL_DATABASE: pizza
-          MYSQL_ROOT_HOST: '%'
         ports:
           - '3306:3306'
         options: >-
-          --health-cmd="mysqladmin ping -ptheHood1335!"
-          --health-interval=20s
-          --health-timeout=10s
-          --health-retries=10
-          --health-start-period=30s
-    
-    # We'll capture the 'version' output from the "set_version" step, if you want to reuse it later
-    outputs:
-      version: ${{ steps.set_version.outputs.version }}
+          --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      # 1) Set version
-      - name: set version
-        id: set_version
-        run: |
-          version=$(date +'%Y%m%d.%H%M%S')
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          printf '{"version": "%s" }' "$version" > src/version.json
-          echo "Set version to $version"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -51,13 +35,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Wait for MySQL
-        run: |
-          while ! mysql -h"127.0.0.1" -P"3306" -uroot -p"theHood1335!" -e "SELECT 1" >/dev/null 2>&1; do
-            echo "Waiting for MySQL to be ready..."
-            sleep 2
-          done
-          echo "MySQL is ready"
+      - name: Lint
+        run: npm run lint
 
       - name: Write config file
         run: |
@@ -67,10 +46,9 @@ jobs:
               connection: {
                 host: '127.0.0.1',
                 user: 'root',
-                password: 'theHood1335!',
+                password: 'tempdbpassword',
                 database: 'pizza',
                 connectTimeout: 60000,
-                charset: 'utf8mb4'
               },
               listPerPage: 10,
             },
@@ -80,16 +58,15 @@ jobs:
             },
           };" > src/config.js
 
-      - name: Lint
-        run: npm run lint
+      - name: Tests
+        run: npm test
 
-      - name: Run tests (with coverage)
+      - name: set version
+        id: set_version
         run: |
-          # Optionally wait a bit if needed
-          sleep 5
-          npm run test:coverage
-        env:
-          CI: true
+          version=$(date +'%Y%m%d.%H%M%S')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          printf '{"version": "%s" }' "$version" > src/version.json
 
       - name: Update coverage
         run: |
