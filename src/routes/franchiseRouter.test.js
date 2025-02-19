@@ -68,8 +68,8 @@ async function registerDinerUser() {
 
 describe('Franchise Router', () => {
   let adminToken;
-//   let adminUserId;
-
+  // eslint-disable-next-line no-unused-vars
+  let adminUserId;
   let dinerUser;       // normal user object
   let dinerToken;      // normal user's token
   let dinerUserId;
@@ -158,7 +158,7 @@ describe('Franchise Router', () => {
       expect(Array.isArray(res.body)).toBe(true);
     });
 
-    test('403 or empty result if some other diner tries to view another diner’s franchises', async () => {
+    test('403 or empty result if some other diner tries to view another diner\'s franchises', async () => {
       // For now, your code allows only "if (req.user.id === userId || req.user.isRole(Role.Admin))".
       // That means it won't return data for a different user who isn't admin => returns empty array or 200?
       // Actually the code shows "result = await DB.getUserFranchises(userId);" only if user is that user or admin.
@@ -202,7 +202,7 @@ describe('Franchise Router', () => {
     });
 
     test('201 or 200 if user is admin (success)', async () => {
-      // Let’s have admin create a franchise, specifying the diner as an additional admin
+      // Let's have admin create a franchise, specifying the diner as an additional admin
       franchiseData.admins[0].email = dinerUser.email;
       const res = await request(app)
         .post('/api/franchise')

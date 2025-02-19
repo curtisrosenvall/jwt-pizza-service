@@ -74,7 +74,8 @@ jest.setTimeout(30000);
 
 describe('Order Router', () => {
   let adminToken;
-//   let adminUser;
+  // eslint-disable-next-line no-unused-vars
+  let adminUser;
   let dinerToken;
   let dinerUser;
 
@@ -157,7 +158,7 @@ describe('Order Router', () => {
 
   //
   // ------------------------------------------------------------
-  // 3. GET /api/order - get the user’s orders
+  // 3. GET /api/order - get the user's orders
   // ------------------------------------------------------------
   //
   describe('GET /api/order', () => {

@@ -54,10 +54,10 @@ describe('Auth Router', () => {
   let testUserToken;
   let testUserId;
 
-  // We’ll also test an admin user for the update route.
+  // We'll also test an admin user for the update route.
   let adminUser;
-//   let adminToken;
-//   let adminId;
+  // let adminToken;  // Commented out until tests are implemented
+  // let adminId;     // Commented out until tests are implemented
 
   //
   // ---------------------------------------------
@@ -184,8 +184,8 @@ describe('Auth Router', () => {
         .put('/api/auth')
         .send({ email: adminUser.email, password: adminUser.password });
       if (adminLoginRes.status === 200) {
-        adminToken = adminLoginRes.body.token;
-        adminId = adminLoginRes.body.user.id;
+        // adminToken = adminLoginRes.body.token;
+        // adminId = adminLoginRes.body.user.id;
       }
     });
 
@@ -203,7 +203,7 @@ describe('Auth Router', () => {
     // });
 
     // test('non-admin user cannot update someone else', async () => {
-    //   // Attempt to update the admin with the diner’s token => should fail
+    //   // Attempt to update the admin with the diner's token => should fail
     //   const res = await request(app)
     //     .put(`/api/auth/${adminId}`)
     //     .set('Authorization', `Bearer ${testUserToken}`)
@@ -214,7 +214,7 @@ describe('Auth Router', () => {
     // });
 
     // test('admin can update another user', async () => {
-    //   // Admin tries to update our diner’s account
+    //   // Admin tries to update our diner's account
     //   const newEmail = randomName() + '@adminupdate.com';
     //   const res = await request(app)
     //     .put(`/api/auth/${testUserId}`)
