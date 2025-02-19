@@ -9,7 +9,6 @@ const request = require('supertest');
 const app = require('../service');
 const { DB, Role } = require('../database/database.js');
 
-
 /**
  * Optional utility: generate a random name for your test objects
  */
