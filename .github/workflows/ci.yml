@@ -40,7 +40,7 @@ jobs:
         run: |
           version=$(date +'%Y%m%d.%H%M%S')
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          printf '{"version": "%s"}' "$version" > src/version.json
+          printf '{"version": "%s" }' "$version" > src/version.json
           echo "Set version to $version"
 
       - name: Setup Node
@@ -91,17 +91,8 @@ jobs:
         env:
           CI: true
 
-      # 2) Post coverage badge
-      - name: Install jq
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
       - name: Update coverage
-        if: always()  # so it runs even if tests fail
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-          echo "Coverage is $coverage%"
           color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
-          curl -s -X POST "https://badge.cs329.click/badge/${{ github.repository_owner }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" \
-            -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+          curl -s -X POST "https://badge.cs329.click/badge/${{ github.repository_owner }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
