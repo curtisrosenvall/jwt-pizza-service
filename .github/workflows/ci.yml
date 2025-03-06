@@ -37,7 +37,7 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Write config file
+      - name: Write test config file
         run: |
           echo "module.exports = {
             jwtSecret: '${{ secrets.JWT_SECRET }}',
@@ -79,9 +79,29 @@ jobs:
           cp Dockerfile dist
           cp -r src/* dist
           cp *.json dist
-          sed -i "s/root/${{ secrets.DB_USERNAME }}/g" dist/config.js
-          sed -i "s/tempdbpassword/${{ secrets.DB_PASSWORD }}/g" dist/config.js
-          sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
+          
+      - name: Generate production config file
+        run: |
+          echo "module.exports = {
+            jwtSecret: '${{ secrets.JWT_SECRET }}',
+            db: {
+              connection: {
+                host: '${{ secrets.DB_HOSTNAME }}',
+                user: '${{ secrets.DB_USERNAME }}',
+                password: '${{ secrets.DB_PASSWORD }}',
+                database: 'pizza',
+                connectTimeout: 60000,
+              },
+              listPerPage: 10,
+            },
+            factory: {
+              url: 'https://pizza-factory.cs329.click',
+              apiKey: '${{ secrets.FACTORY_API_KEY }}',
+            },
+          };" > dist/config.js
+          
+      - name: Debug config file
+        run: cat dist/config.js
 
       - name: Update distribution artifact
         uses: actions/upload-artifact@v4
@@ -103,6 +123,9 @@ jobs:
         with:
           name: package
           path: dist/
+
+      - name: Debug downloaded config
+        run: cat dist/config.js
 
       - name: Create OIDC token to AWS
         uses: aws-actions/configure-aws-credentials@v4
