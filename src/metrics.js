@@ -84,11 +84,11 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   }
 
   const body = JSON.stringify(metric);
-  fetch(`${config.grafana?.url || 'https://otlp-gateway-prod-us-west-0.grafana.net/otlp/v1/metrics'}`, {
+  fetch(`${config.metrics?.url || 'https://otlp-gateway-prod-us-west-0.grafana.net/otlp/v1/metrics'}`, {
     method: 'POST',
     body: body,
     headers: { 
-      Authorization: `Bearer ${config.grafana?.apiKey || process.env.GRAFANA_API_KEY}`, 
+      Authorization: `Bearer ${config.metrics?.apiKey || process.env.GRAFANA_API_KEY}`, 
       'Content-Type': 'application/json' 
     },
   })
