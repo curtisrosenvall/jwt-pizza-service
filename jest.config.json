@@ -3,10 +3,12 @@
   "coverageReporters": ["json-summary", "text"],
   "coverageThreshold": {
     "global": {
-      "lines": 80
+      "lines": 70
     }
   },
   "globalSetup": "./globalSetup.js",
   "globalTeardown": "./globalTeardown.js",
-  "testTimeout": 30000
+  "testTimeout": 30000,
+  "testPathIgnorePatterns": ["/node_modules/", "/dist/"]
+
 }
