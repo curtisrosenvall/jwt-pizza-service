@@ -1,5 +1,4 @@
-const fs = require('fs');
-const path = require('path');
+
 
 // Create the config file with database credentials
 const configContent = `
