@@ -1,4 +1,4 @@
-const metrics = require('./metrics');
+// const metrics = require('./metrics');
 
 class StatusCodeError extends Error {
   constructor(message, statusCode) {
