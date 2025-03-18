@@ -1,6 +1,7 @@
 // globalSetup.js
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const config = require('./src/config.js');
 const dbModel = require('./src/database/dbModel.js'); // path may vary
 
