@@ -2,12 +2,22 @@ const express = require('express');
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
 const franchiseRouter = require('./routes/franchiseRouter.js');
+const healthRouter = require('./routes/healthRouter.js');
+const metrics = require('./metrics');
 const version = require('./version.json');
 const config = require('./config.js');
 
+// Initialize database with performance tracking
+require('./database/databaseWrapper');
+
 const app = express();
-app.use(express.json());
+
+// Add metrics middleware
+app.use(metrics.requestTracker);
+
 app.use(setAuthUser);
+app.use(express.json());
+
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
@@ -18,14 +28,21 @@ app.use((req, res, next) => {
 
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
+
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/order', orderRouter);
 apiRouter.use('/franchise', franchiseRouter);
+apiRouter.use('/health', healthRouter);
 
 apiRouter.use('/docs', (req, res) => {
   res.json({
     version: version.version,
-    endpoints: [...authRouter.endpoints, ...orderRouter.endpoints, ...franchiseRouter.endpoints],
+    endpoints: [
+      ...authRouter.endpoints, 
+      ...orderRouter.endpoints, 
+      ...franchiseRouter.endpoints,
+      ...healthRouter.endpoints
+    ],
     config: { factory: config.factory.url, db: config.db.connection.host },
   });
 });
