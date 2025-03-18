@@ -37,15 +37,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Write test config file
+      - name: Generate production config file
         run: |
-          echo "module.exports = {
+          echo "const jwt = require('jsonwebtoken');
+          
+          module.exports = {
             jwtSecret: '${{ secrets.JWT_SECRET }}',
             db: {
               connection: {
-                host: '127.0.0.1',
-                user: 'root',
-                password: 'theHood1335!',
+                host: '${{ secrets.DB_HOSTNAME }}',
+                user: '${{ secrets.DB_USERNAME }}',
+                password: '${{ secrets.DB_PASSWORD }}',
                 database: 'pizza',
                 connectTimeout: 60000,
               },
@@ -56,11 +58,11 @@ jobs:
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
             metrics: {
-              source:"jwt-pizza-service",
-              url:'${{ secrets.METRICS_URL}}',
-              apiKey:'${{secrets.METRICS_API_KEY}}'
-              }
-          };" > src/config.js
+              source: 'jwt-pizza-service',
+              url: '${{ secrets.METRICS_URL}}',
+              apiKey: '${{secrets.METRICS_API_KEY}}'
+            }
+          };" > dist/config.js
 
       - name: Tests
         run: npm test
