@@ -204,8 +204,8 @@ function recordAuthAttempt(success) {
   }
 }
 
-// Record pizza sale or failure
-function recordPizzaSale(items, success = true) {
+// Record pizza sale or failure with latency
+function recordPizzaSale(items, success = true, duration = 0) {
   try {
     // Generate a simple identifier for this order to prevent duplicates
     const orderItems = items || [];
@@ -248,11 +248,15 @@ function recordPizzaSale(items, success = true) {
       metrics.current_minute_pizza_failures++;
       console.log('[Metrics] Recorded pizza order failure');
     }
+    
+    // If we have a duration, send it as a pizza_creation_latency metric
+    if (duration > 0) {
+      sendMetricToGrafana('pizza_creation_latency', duration, 'gauge', 'ms');
+    }
   } catch (error) {
     console.error('[Metrics] Error recording pizza sale:', error);
   }
 }
-
 // Update active users count
 function updateActiveUserCount() {
   const now = Date.now();
@@ -432,11 +436,28 @@ function recordUserSignup(userData) {
 }
 
 // Wrap the original sendMetricToGrafana function
-const originalSendMetricToGrafana = function(metricName, metricValue, type, unit) {
+// Updated sendMetricToGrafana function to properly handle decimal values
+function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
   if (!config.metrics || !config.metrics.apiKey || !config.metrics.url) {
     console.log(`[Metrics] Skipping metric ${metricName} - Missing configuration`);
     return;
   }
+  
+  // Special handling for decimal metrics
+  const isDecimalValue = Number(metricValue) !== Math.floor(Number(metricValue));
+  
+  // Create proper data point based on value type
+  let dataPoint;
+  
+  if (isDecimalValue) {
+    // Use asDouble for decimal values
+    dataPoint = { asDouble: Number(metricValue) };
+    console.log(`[Metrics Debug] Using asDouble for decimal metric ${metricName} = ${metricValue}`);
+  } else {
+    // Use asInt for integer values
+    dataPoint = { asInt: Math.round(Number(metricValue)) };
+  }
+  
   const metric = {
     resourceMetrics: [
       {
@@ -457,7 +478,7 @@ const originalSendMetricToGrafana = function(metricName, metricValue, type, unit
                 [type]: {
                   dataPoints: [
                     {
-                      asInt: Math.round(metricValue),
+                      ...dataPoint,
                       timeUnixNano: Date.now() * 1000000,
                     },
                   ],
@@ -476,6 +497,12 @@ const originalSendMetricToGrafana = function(metricName, metricValue, type, unit
   }
 
   const body = JSON.stringify(metric);
+  
+  // Add extra debug for revenue metric
+  if (metricName === 'pizza_revenue_per_minute') {
+    console.log(`[Metrics Debug] Sending revenue metric payload:`);
+    console.log(JSON.stringify(metric, null, 2));
+  }
   
   // Use Basic auth with the full API key
   const encodedCredentials = Buffer.from(config.metrics.apiKey).toString('base64');
@@ -505,13 +532,15 @@ const originalSendMetricToGrafana = function(metricName, metricValue, type, unit
           console.error(`[Metrics Error] Failed to push data to Grafana: ${text}`);
         });
       } else if (isImportantMetric) {
-        console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue}`);
+        // For decimal values, note that we're using asDouble
+        const valueTypeStr = isDecimalValue ? 'asDouble' : 'asInt';
+        console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue} (using ${valueTypeStr})`);
       }
     })
     .catch((error) => {
       console.error(`[Metrics Error] Error pushing metric ${metricName}:`, error);
     });
-};
+}
 
 // Create instrumented version of sendMetricToGrafana
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
@@ -570,32 +599,26 @@ const requestTracker = (req, res, next) => {
     const originalEnd = res.end;
     
     // Override end method to capture metrics
+    // In the res.end function of requestTracker middleware
     res.end = function(...args) {
-      try {
-        // Calculate request duration
-        const duration = Date.now() - start;
-        metrics.latency += duration;
-        
-        // Track status codes
-        const statusCode = res.statusCode;
-        metrics.statusCodes[statusCode] = (metrics.statusCodes[statusCode] || 0) + 1;
-        
-        // Track errors
-        if (statusCode >= 400) {
-          metrics.errors++;
-          
-          // Send error metric immediately for critical errors
-          if (statusCode >= 500) {
-            sendMetricToGrafana('server_error', 1, 'sum', '1');
-          }
-        }
-      } catch (error) {
-        console.error('[Metrics] Error in response end handler:', error);
-      }
-      
-      // Call original end method
-      return originalEnd.apply(this, args);
-    };
+  try {
+    // Calculate request duration
+    const duration = Date.now() - start;
+    
+    // Still track cumulative latency (but don't use this for visualization)
+    metrics.latency += duration;
+    
+    // Send individual request latency as a gauge
+    sendMetricToGrafana('request_latency', duration, 'gauge', 'ms');
+    
+    // Rest of your code...
+  } catch (error) {
+    console.error('[Metrics] Error in response end handler:', error);
+  }
+  
+  // Call original end method
+  return originalEnd.apply(this, args);
+};
     
     next();
   } catch (error) {
