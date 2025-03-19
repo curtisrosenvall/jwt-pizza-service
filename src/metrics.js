@@ -14,7 +14,8 @@ const metrics = {
   get_requests: 0,
   post_requests: 0,
   put_requests: 0,
-  delete_requests: 0
+  delete_requests: 0,
+  user_signUps:0
 };
 
 // Send metrics to Grafana every 5 seconds
@@ -47,6 +48,7 @@ setInterval(() => {
   sendMetricToGrafana('db_queries', metrics.dbQueries, 'sum', '1');
   sendMetricToGrafana('db_errors', metrics.dbErrors, 'sum', '1');
   sendMetricToGrafana('db_latency', metrics.dbLatency, 'sum', 'ms');
+  sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', 'count')
 }, 5000);
 
 function getCpuUsagePercentage() {
