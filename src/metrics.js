@@ -15,7 +15,18 @@ const metrics = {
   post_requests: 0,
   put_requests: 0,
   delete_requests: 0,
-  user_signUps:0
+  user_signUps: 0,
+  // New database metrics
+  dbQueryTypes: {
+    select: 0,
+    insert: 0,
+    update: 0,
+    delete: 0,
+    unknown: 0
+  },
+  dbConnectionErrors: 0,
+  dbQueryErrors: 0,
+  dbSlowQueries: 0
 };
 
 // Send metrics to Grafana every 5 seconds
@@ -48,7 +59,25 @@ setInterval(() => {
   sendMetricToGrafana('db_queries', metrics.dbQueries, 'sum', '1');
   sendMetricToGrafana('db_errors', metrics.dbErrors, 'sum', '1');
   sendMetricToGrafana('db_latency', metrics.dbLatency, 'sum', 'ms');
-  sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', '1')
+  sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', '1');
+  
+  // New DB metrics
+  sendMetricToGrafana('db_connection_errors', metrics.dbConnectionErrors, 'sum', '1');
+  sendMetricToGrafana('db_query_errors', metrics.dbQueryErrors, 'sum', '1');
+  sendMetricToGrafana('db_slow_queries', metrics.dbSlowQueries, 'sum', '1');
+  
+  // DB query types
+  Object.entries(metrics.dbQueryTypes).forEach(([type, count]) => {
+    sendMetricToGrafana(`db_query_${type}`, count, 'sum', '1');
+  });
+  
+  // Average DB query time
+  const avgDbQueryTime = metrics.dbQueries > 0 ? metrics.dbLatency / metrics.dbQueries : 0;
+  sendMetricToGrafana('avg_db_query_time', avgDbQueryTime, 'gauge', 'ms');
+  
+  // DB error rate
+  const dbErrorRate = metrics.dbQueries > 0 ? (metrics.dbErrors / metrics.dbQueries) * 100 : 0;
+  sendMetricToGrafana('db_error_rate', dbErrorRate, 'gauge', '%');
 }, 5000);
 
 function getCpuUsagePercentage() {
@@ -65,85 +94,89 @@ function getMemoryUsagePercentage() {
 }
 
 function recordUserSignup(userData) {
-    console.log('METRICS: Recording user signup for', userData.email);
-    try {
-      // Send a user_signup counter metric
-      sendMetricToGrafana('user_signup', 1, 'sum', 'count');
-      
-      // Log locally for debugging
-      console.log(`[METRIC] User signup: ${userData.email}`);
-    } catch (error) {
-      console.error('Failed to record user signup metric:', error);
-      // Don't throw - metrics should never break core functionality
-    }
+  console.log('METRICS: Recording user signup for', userData.email);
+  try {
+    // Increment user signup counter
+    metrics.user_signUps++;
+    
+    // Send a user_signup counter metric
+    sendMetricToGrafana('user_signup', 1, 'sum', 'count');
+    
+    // Log locally for debugging
+    console.log(`[METRIC] User signup: ${userData.email}`);
+  } catch (error) {
+    console.error('Failed to record user signup metric:', error);
+    // Don't throw - metrics should never break core functionality
   }
+}
 
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
-    const metric = {
-      resourceMetrics: [
-        {
-          resource: {
-            attributes: [
-              {
-                key: "service.name",
-                value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
-              }
-            ]
-          },
-          scopeMetrics: [
+  const metric = {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
             {
-              metrics: [
-                {
-                  name: metricName,
-                  unit: unit,
-                  [type]: {
-                    dataPoints: [
-                      {
-                        asInt: Math.round(metricValue),
-                        timeUnixNano: Date.now() * 1000000,
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          ],
+              key: "service.name",
+              value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
+            }
+          ]
         },
-      ],
-    };
-  
-    if (type === 'sum') {
-      metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
-      metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].isMonotonic = true;
-    }
-  
-    const body = JSON.stringify(metric);
-    
-    // Use Basic auth with the full API key
-    const encodedCredentials = Buffer.from(config.metrics.apiKey).toString('base64');
-    
-    fetch(`${config.metrics.url}`, {
-      method: 'POST',
-      body: body,
-      headers: { 
-        'Authorization': `Basic ${encodedCredentials}`, 
-        'Content-Type': 'application/json' 
+        scopeMetrics: [
+          {
+            metrics: [
+              {
+                name: metricName,
+                unit: unit,
+                [type]: {
+                  dataPoints: [
+                    {
+                      asInt: Math.round(metricValue),
+                      timeUnixNano: Date.now() * 1000000,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
       },
-    })
-      .then((response) => {
-        console.log(`[Metrics] Sent: ${metricName}, Status: ${response.status}`);
-        if (!response.ok) {
-          response.text().then((text) => {
-            console.error(`[Metrics Error] Failed to push data to Grafana: ${text}`);
-          });
-        } else {
-          console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue}`);
-        }
-      })
-      .catch((error) => {
-        console.error(`[Metrics Error] Error pushing metric ${metricName}:`, error);
-      });
+    ],
+  };
+
+  if (type === 'sum') {
+    metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
+    metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].isMonotonic = true;
   }
+
+  const body = JSON.stringify(metric);
+  
+  // Use Basic auth with the full API key
+  const encodedCredentials = Buffer.from(config.metrics.apiKey).toString('base64');
+  
+  fetch(`${config.metrics.url}`, {
+    method: 'POST',
+    body: body,
+    headers: { 
+      'Authorization': `Basic ${encodedCredentials}`, 
+      'Content-Type': 'application/json' 
+    },
+  })
+    .then((response) => {
+      console.log(`[Metrics] Sent: ${metricName}, Status: ${response.status}`);
+      if (!response.ok) {
+        response.text().then((text) => {
+          console.error(`[Metrics Error] Failed to push data to Grafana: ${text}`);
+        });
+      } else {
+        console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue}`);
+      }
+    })
+    .catch((error) => {
+      console.error(`[Metrics Error] Error pushing metric ${metricName}:`, error);
+    });
+}
+
 // Request tracking middleware
 const requestTracker = (req, res, next) => {
   const start = Date.now();
@@ -189,14 +222,47 @@ const requestTracker = (req, res, next) => {
   next();
 };
 
-// Database metrics tracking
-const trackDbQuery = (duration, success = true) => {
+// Enhanced database metrics tracking
+const trackDbQuery = (duration, success = true, queryType = 'unknown') => {
+  // Increment total query count
   metrics.dbQueries++;
+  
+  // Add query duration to total latency
   metrics.dbLatency += duration;
   
+  // Track by query type
+  if (metrics.dbQueryTypes[queryType] !== undefined) {
+    metrics.dbQueryTypes[queryType]++;
+  } else {
+    metrics.dbQueryTypes.unknown++;
+  }
+  
+  // Track if it was a slow query (threshold defined in databaseWrapper.js)
+  if (duration > 300) { // 300ms threshold
+    metrics.dbSlowQueries++;
+    sendMetricToGrafana('db_slow_query', 1, 'sum', '1');
+  }
+  
+  // Track errors
   if (!success) {
     metrics.dbErrors++;
+    metrics.dbQueryErrors++;
   }
+};
+
+// Track database connection errors
+const trackDbConnectionError = () => {
+  metrics.dbConnectionErrors++;
+  sendMetricToGrafana('db_connection_error', 1, 'sum', '1');
+};
+
+// Update connection pool metrics
+const updateDbPoolMetrics = (totalConnections, usedConnections, queueSize = 0) => {
+  // These metrics might not be directly applicable to your MySQL implementation
+  // but we'll keep the function for future use
+  sendMetricToGrafana('db_pool_size', totalConnections, 'gauge', '1');
+  sendMetricToGrafana('db_pool_used', usedConnections, 'gauge', '1');
+  sendMetricToGrafana('db_pool_queue', queueSize, 'gauge', '1');
 };
 
 // Get current metrics for API endpoint
@@ -230,7 +296,14 @@ const getMetrics = () => {
       totalQueries: metrics.dbQueries,
       errors: metrics.dbErrors,
       errorRate: dbErrorRate.toFixed(2) + '%',
-      avgLatency: avgDbLatency.toFixed(2) + 'ms'
+      avgLatency: avgDbLatency.toFixed(2) + 'ms',
+      connectionErrors: metrics.dbConnectionErrors,
+      queryErrors: metrics.dbQueryErrors,
+      slowQueries: metrics.dbSlowQueries,
+      queryTypes: metrics.dbQueryTypes
+    },
+    users: {
+      signups: metrics.user_signUps
     }
   };
 };
@@ -267,6 +340,8 @@ function formatUptime(seconds) {
 module.exports = {
   requestTracker,
   trackDbQuery,
+  trackDbConnectionError,
+  updateDbPoolMetrics,
   getMetrics,
   recordUserSignup
 };

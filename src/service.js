@@ -5,6 +5,7 @@ const franchiseRouter = require('./routes/franchiseRouter.js');
 const healthRouter = require('./routes/healthRouter.js');
 const metrics = require('./metrics');
 const version = require('./version.json');
+
 const config = require('./config.js');
 
 // Initialize database with performance tracking
