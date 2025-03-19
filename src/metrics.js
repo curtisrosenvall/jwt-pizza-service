@@ -63,68 +63,72 @@ function getMemoryUsagePercentage() {
 }
 
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
-  const metric = {
-    resourceMetrics: [
-      {
-        resource: {
-          attributes: [
-            {
-              key: "service.name",
-              value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
-            }
-          ]
-        },
-        scopeMetrics: [
-          {
-            metrics: [
+    const metric = {
+      resourceMetrics: [
+        {
+          resource: {
+            attributes: [
               {
-                name: metricName,
-                unit: unit,
-                [type]: {
-                  dataPoints: [
-                    {
-                      asInt: Math.round(metricValue),
-                      timeUnixNano: Date.now() * 1000000,
-                    },
-                  ],
-                },
-              },
-            ],
+                key: "service.name",
+                value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
+              }
+            ]
           },
-        ],
+          scopeMetrics: [
+            {
+              metrics: [
+                {
+                  name: metricName,
+                  unit: unit,
+                  [type]: {
+                    dataPoints: [
+                      {
+                        asInt: Math.round(metricValue),
+                        timeUnixNano: Date.now() * 1000000,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    if (type === 'sum') {
+      metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
+      metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].isMonotonic = true;
+    }
+  
+    const body = JSON.stringify(metric);
+    
+    // Log debug info about the API key (safely)
+    console.log(`[Metrics Debug] URL: ${config.metrics.url}`);
+    console.log(`[Metrics Debug] API Key exists: ${Boolean(config.metrics.apiKey)}`);
+    
+    fetch(`${config.metrics.url}`, {
+      method: 'POST',
+      body: body,
+      headers: { 
+        'Authorization': `Bearer ${config.metrics.apiKey}`, 
+        'Content-Type': 'application/json' 
       },
-    ],
-  };
-
-  if (type === 'sum') {
-    metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
-    metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].isMonotonic = true;
-  }
-
-  const body = JSON.stringify(metric);
-  fetch(`${config.metrics.url}`, {
-    method: 'POST',
-    body: body,
-    headers: { 
-      // Updated authorization header format without "Bearer" prefix
-      'Authorization': config.metrics.apiKey,
-      'Content-Type': 'application/json' 
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        response.text().then((text) => {
-          console.error(`Failed to push metrics data to Grafana: ${text}`);
-        });
-      } else {
-        console.log(`Successfully sent metric: ${metricName} = ${metricValue}`);
-      }
     })
-    .catch((error) => {
-      console.error('Error pushing metrics:', error);
-    });
-}
-
+      .then((response) => {
+        console.log(`[Metrics] Sent: ${metricName}, Status: ${response.status}`);
+        if (!response.ok) {
+          response.text().then((text) => {
+            console.error(`[Metrics Error] Failed to push data to Grafana: ${text}`);
+          });
+        } else {
+          console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue}`);
+        }
+      })
+      .catch((error) => {
+        console.error(`[Metrics Error] Error pushing metric ${metricName}:`, error);
+      });
+  }
 // Request tracking middleware
 const requestTracker = (req, res, next) => {
   const start = Date.now();
