@@ -53,30 +53,41 @@ function getMemoryUsagePercentage() {
 }
 
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
-  const metric = {
-    resourceMetrics: [
-      {
-        scopeMetrics: [
-          {
-            metrics: [
+    const metric = {
+      resourceMetrics: [
+        {
+          resource: {
+            attributes: [
               {
-                name: metricName,
-                unit: unit,
-                [type]: {
-                  dataPoints: [
-                    {
-                      asInt: Math.round(metricValue),
-                      timeUnixNano: Date.now() * 1000000,
-                    },
-                  ],
-                },
-              },
-            ],
+                key: "service.name",
+                value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
+              }
+            ]
           },
-        ],
-      },
-    ],
-  };
+          scopeMetrics: [
+            {
+              metrics: [
+                {
+                  name: metricName,
+                  unit: unit,
+                  [type]: {
+                    dataPoints: [
+                      {
+                        asInt: Math.round(metricValue),
+                        timeUnixNano: Date.now() * 1000000,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    // Rest of your function remains the same...
+  
 
   if (type === 'sum') {
     metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
@@ -84,11 +95,11 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   }
 
   const body = JSON.stringify(metric);
-  fetch(`${config.metrics?.url || 'https://otlp-gateway-prod-us-west-0.grafana.net/otlp/v1/metrics'}`, {
+  fetch(`${config.metrics.url}`, {
     method: 'POST',
     body: body,
     headers: { 
-      Authorization: `Bearer ${config.metrics?.apiKey || process.env.GRAFANA_API_KEY}`, 
+      Authorization: `Bearer ${config.metrics.apiKey}`, 
       'Content-Type': 'application/json' 
     },
   })
@@ -102,8 +113,8 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
     .catch((error) => {
       console.error('Error pushing metrics:', error);
     });
-}
 
+}
 // Request tracking middleware
 const requestTracker = (req, res, next) => {
   const start = Date.now();
