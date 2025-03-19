@@ -37,6 +37,56 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Write test config file
+        run: |
+          echo "const jwt = require('jsonwebtoken');
+          
+          module.exports = {
+            jwtSecret: '${{ secrets.JWT_SECRET }}',
+            db: {
+              connection: {
+                host: '127.0.0.1',
+                user: 'root',
+                password: 'tempdbpassword',
+                database: 'pizza',
+                connectTimeout: 60000,
+              },
+              listPerPage: 10,
+            },
+            factory: {
+              url: 'https://pizza-factory.cs329.click',
+              apiKey: '${{ secrets.FACTORY_API_KEY }}',
+            },
+            metrics: {
+              source: 'jwt-pizza-service',
+              url: '${{ secrets.METRICS_URL}}',
+              apiKey: '${{secrets.METRICS_API_KEY}}'
+            }
+          };" > src/config.js
+
+      - name: Tests
+        run: npm test
+
+      - name: Set version
+        id: set_version
+        run: |
+          version=$(date +'%Y%m%d.%H%M%S')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          printf '{"version": "%s" }' "$version" > src/version.json
+
+      - name: Update coverage
+        run: |
+          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
+          curl -s -X POST "https://badge.cs329.click/badge/${{ github.repository_owner }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+
+      - name: Create dist
+        run: |
+          mkdir -p dist
+          cp Dockerfile dist
+          cp -r src/* dist
+          cp *.json dist
+          
       - name: Generate production config file
         run: |
           echo "const jwt = require('jsonwebtoken');
@@ -62,49 +112,6 @@ jobs:
               url: '${{ secrets.METRICS_URL}}',
               apiKey: '${{secrets.METRICS_API_KEY}}'
             }
-          };" > dist/config.js
-
-      - name: Tests
-        run: npm test
-
-      - name: Set version
-        id: set_version
-        run: |
-          version=$(date +'%Y%m%d.%H%M%S')
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          printf '{"version": "%s" }' "$version" > src/version.json
-
-      - name: Update coverage
-        run: |
-          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-          color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
-          curl -s -X POST "https://badge.cs329.click/badge/${{ github.repository_owner }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
-
-      - name: Create dist
-        run: |
-          mkdir dist
-          cp Dockerfile dist
-          cp -r src/* dist
-          cp *.json dist
-          
-      - name: Generate production config file
-        run: |
-          echo "module.exports = {
-            jwtSecret: '${{ secrets.JWT_SECRET }}',
-            db: {
-              connection: {
-                host: '${{ secrets.DB_HOSTNAME }}',
-                user: '${{ secrets.DB_USERNAME }}',
-                password: '${{ secrets.DB_PASSWORD }}',
-                database: 'pizza',
-                connectTimeout: 60000,
-              },
-              listPerPage: 10,
-            },
-            factory: {
-              url: 'https://pizza-factory.cs329.click',
-              apiKey: '${{ secrets.FACTORY_API_KEY }}',
-            },
           };" > dist/config.js
           
       - name: Debug config file
