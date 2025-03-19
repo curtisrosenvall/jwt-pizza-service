@@ -103,15 +103,15 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   
     const body = JSON.stringify(metric);
     
-    // Log debug info about the API key (safely)
-    console.log(`[Metrics Debug] URL: ${config.metrics.url}`);
-    console.log(`[Metrics Debug] API Key exists: ${Boolean(config.metrics.apiKey)}`);
+    // Use only the part after the colon in the API key
+    const apiKeyParts = config.metrics.apiKey.split(':');
+    const authToken = apiKeyParts.length > 1 ? apiKeyParts[1] : config.metrics.apiKey;
     
     fetch(`${config.metrics.url}`, {
       method: 'POST',
       body: body,
       headers: { 
-        'Authorization': `Bearer ${config.metrics.apiKey}`, 
+        'Authorization': `Bearer ${authToken}`, 
         'Content-Type': 'application/json' 
       },
     })
