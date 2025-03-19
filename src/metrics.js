@@ -48,7 +48,7 @@ setInterval(() => {
   sendMetricToGrafana('db_queries', metrics.dbQueries, 'sum', '1');
   sendMetricToGrafana('db_errors', metrics.dbErrors, 'sum', '1');
   sendMetricToGrafana('db_latency', metrics.dbLatency, 'sum', 'ms');
-  sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', 'count')
+  sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', '1')
 }, 5000);
 
 function getCpuUsagePercentage() {
