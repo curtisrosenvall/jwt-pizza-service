@@ -65,19 +65,8 @@ function getMemoryUsagePercentage() {
 function recordUserSignup(userData) {
     console.log('METRICS: Recording user signup for', userData.email);
     try {
-      const metricData = {
-        name: 'user_signup',
-        timestamp: new Date().toISOString(),
-        tags: ['auth', 'signup'],
-        text: `New user signup: ${userData.name} (${userData.email})`,
-        data: {
-          email: userData.email,
-          name: userData.name
-        }
-      };
-      
-      // Push to metrics service
-      pushMetricToGrafana(metricData);
+      // Send a user_signup counter metric
+      sendMetricToGrafana('user_signup', 1, 'sum', 'count');
       
       // Log locally for debugging
       console.log(`[METRIC] User signup: ${userData.email}`);

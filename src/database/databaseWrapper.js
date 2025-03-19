@@ -45,7 +45,7 @@ DB._getConnection = async function(setUse = true) {
 const originalAddUser = DB.addUser;
 
 DB.addUser = async function(userData) {
-    try {
+
       const result = await originalAddUser.call(this, userData);
       
       // Record the signup metric
@@ -57,9 +57,7 @@ DB.addUser = async function(userData) {
       }
       
       return result;
-    } catch (error) {
-      throw error;
-    }
+   
   };
 
 module.exports = DB; 
