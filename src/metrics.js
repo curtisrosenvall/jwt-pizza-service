@@ -62,6 +62,31 @@ function getMemoryUsagePercentage() {
   return parseFloat(memoryUsage.toFixed(2));
 }
 
+function recordUserSignup(userData) {
+    console.log('METRICS: Recording user signup for', userData.email);
+    try {
+      const metricData = {
+        name: 'user_signup',
+        timestamp: new Date().toISOString(),
+        tags: ['auth', 'signup'],
+        text: `New user signup: ${userData.name} (${userData.email})`,
+        data: {
+          email: userData.email,
+          name: userData.name
+        }
+      };
+      
+      // Push to metrics service
+      pushMetricToGrafana(metricData);
+      
+      // Log locally for debugging
+      console.log(`[METRIC] User signup: ${userData.email}`);
+    } catch (error) {
+      console.error('Failed to record user signup metric:', error);
+      // Don't throw - metrics should never break core functionality
+    }
+  }
+
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
     const metric = {
       resourceMetrics: [
@@ -251,5 +276,6 @@ function formatUptime(seconds) {
 module.exports = {
   requestTracker,
   trackDbQuery,
-  getMetrics
+  getMetrics,
+  recordUserSignup
 };

@@ -6,7 +6,7 @@
       "lines": 70
     }
   },
-
+  "setupFiles": ["./jest.setup.js"],
   "globalSetup": "./globalSetup.js",
   "globalTeardown": "./globalTeardown.js",
   "testTimeout": 30000,
