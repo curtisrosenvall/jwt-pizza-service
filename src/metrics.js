@@ -103,15 +103,14 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   
     const body = JSON.stringify(metric);
     
-    // Use only the part after the colon in the API key
-    const apiKeyParts = config.metrics.apiKey.split(':');
-    const authToken = apiKeyParts.length > 1 ? apiKeyParts[1] : config.metrics.apiKey;
+    // Use Basic auth with the full API key
+    const encodedCredentials = Buffer.from(config.metrics.apiKey).toString('base64');
     
     fetch(`${config.metrics.url}`, {
       method: 'POST',
       body: body,
       headers: { 
-        'Authorization': `Bearer ${authToken}`, 
+        'Authorization': `Basic ${encodedCredentials}`, 
         'Content-Type': 'application/json' 
       },
     })
