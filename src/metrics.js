@@ -16,6 +16,7 @@ const metrics = {
   put_requests: 0,
   delete_requests: 0,
   user_signUps: 0,
+  user_signUps_delta: 0,
   // New database metrics
   dbQueryTypes: {
     select: 0,
@@ -28,6 +29,36 @@ const metrics = {
   dbQueryErrors: 0,
   dbSlowQueries: 0
 };
+
+// Track changes to metrics.user_signUps property
+const trackMetricsChanges = () => {
+  let userSignUpsValue = metrics.user_signUps;
+  
+  Object.defineProperty(metrics, 'user_signUps', {
+    get: function() {
+      return userSignUpsValue;
+    },
+    set: function(newValue) {
+      if (newValue !== userSignUpsValue) {
+        console.log(`---------- METRICS CHANGE DETECTED ----------`);
+        console.log(`metrics.user_signUps changed: ${userSignUpsValue} -> ${newValue}`);
+        
+        // Log stack trace to find where the change came from
+        const stack = new Error().stack;
+        console.log('Changed from:');
+        console.log(stack.split('\n').slice(1, 5).join('\n')); // Show 4 levels
+        
+        console.log('--------------------------------------------');
+      }
+      userSignUpsValue = newValue;
+    },
+    enumerable: true,
+    configurable: true
+  });
+};
+
+// Initialize the property tracker
+trackMetricsChanges();
 
 // Send metrics to Grafana every 5 seconds
 setInterval(() => {
@@ -59,7 +90,14 @@ setInterval(() => {
   sendMetricToGrafana('db_queries', metrics.dbQueries, 'sum', '1');
   sendMetricToGrafana('db_errors', metrics.dbErrors, 'sum', '1');
   sendMetricToGrafana('db_latency', metrics.dbLatency, 'sum', 'ms');
-  sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', '1');
+  console.log(`DEBUG: About to send user_signup metric, current value is ${metrics.user_signUps}`);
+  if (metrics.user_signUps_delta > 0) {
+    console.log(`Sending user_signup delta: ${metrics.user_signUps_delta}`);
+    sendMetricToGrafana('user_signup', metrics.user_signUps, 'sum', '1');
+    
+    // Reset the delta after sending - MAKE SURE THIS LINE IS HERE
+    metrics.user_signUps_delta = 0;
+  }
   
   // New DB metrics
   sendMetricToGrafana('db_connection_errors', metrics.dbConnectionErrors, 'sum', '1');
@@ -96,21 +134,25 @@ function getMemoryUsagePercentage() {
 function recordUserSignup(userData) {
   console.log('METRICS: Recording user signup for', userData.email);
   try {
-    // Increment user signup counter
+    // Increment main counter
     metrics.user_signUps++;
     
-    // Send a user_signup counter metric
-    sendMetricToGrafana('user_signup', 1, 'sum', 'count');
+    // Also increment the delta counter that tracks changes since last report
+    metrics.user_signUps_delta++;
     
     // Log locally for debugging
-    console.log(`[METRIC] User signup: ${userData.email}`);
+    console.log(`[METRIC] User signup: ${userData.email}, total: ${metrics.user_signUps}, delta: ${metrics.user_signUps_delta}`);
   } catch (error) {
     console.error('Failed to record user signup metric:', error);
-    // Don't throw - metrics should never break core functionality
   }
 }
 
-function sendMetricToGrafana(metricName, metricValue, type, unit) {
+// Wrap the original sendMetricToGrafana function
+const originalSendMetricToGrafana = function(metricName, metricValue, type, unit) {
+  if (!config.metrics || !config.metrics.apiKey || !config.metrics.url) {
+    console.log(`[Metrics] Skipping metric ${metricName} - Missing configuration`);
+    return;
+  }
   const metric = {
     resourceMetrics: [
       {
@@ -171,10 +213,30 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
       } else {
         console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue}`);
       }
+      if (response.ok && metricName === 'user_signup') {
+        console.log(`[Grafana Debug] Successfully sent user_signup metric: ${metricValue}`);
+      }
     })
     .catch((error) => {
       console.error(`[Metrics Error] Error pushing metric ${metricName}:`, error);
     });
+};
+
+// Create instrumented version of sendMetricToGrafana
+function sendMetricToGrafana(metricName, metricValue, type, unit) {
+  if (metricName === 'user_signup') {
+    console.log(`---------- SENDING USER SIGNUP METRIC ----------`);
+    console.log(`Sending user_signup metric with value: ${metricValue}, type: ${type}, unit: ${unit}`);
+    
+    // Log stack trace
+    const stack = new Error().stack;
+    console.log('Called from:');
+    console.log(stack.split('\n').slice(1, 5).join('\n')); // Show 4 levels
+    
+    console.log(`-----------------------------------------------`);
+  }
+  
+  return originalSendMetricToGrafana(metricName, metricValue, type, unit);
 }
 
 // Request tracking middleware
@@ -336,6 +398,9 @@ function formatUptime(seconds) {
   
   return parts.join(' ');
 }
+
+// Log message about debugging being enabled
+console.log('[Metrics] Enhanced debugging for user signup tracking enabled');
 
 module.exports = {
   requestTracker,
