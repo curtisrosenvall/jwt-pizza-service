@@ -108,10 +108,10 @@ jobs:
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
             metrics: {
-              source: 'jwt-pizza-service',
-              url: '${{ secrets.METRICS_URL}}',
-              apiKey: '${{secrets.METRICS_API_KEY}}'
-            }
+            source: 'jwt-pizza-service',
+            url: '${{ secrets.METRICS_URL}}',
+            apiKey: '${{ secrets.METRICS_USER_ID }}:${{secrets.METRICS_API_KEY}}'
+          }
           };" > dist/config.js
           
       - name: Debug config file
