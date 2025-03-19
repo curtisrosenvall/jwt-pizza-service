@@ -39,7 +39,7 @@ const trackOrderCreation = (req, res, next) => {
         return originalSend.apply(this, arguments);
       };
     }
-    console.log(`[Metrics Debug] Sending pizza_creation_latency = ${duration}ms`);
+
 
     next();
   };
