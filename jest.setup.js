@@ -1,6 +1,11 @@
 jest.mock('./src/metrics', () => ({
-    requestTracker: jest.fn((req, res, next) => next()),
-    trackDbQuery: jest.fn(),
-    getMetrics: jest.fn(() => ({})),
-    recordUserSignup: jest.fn()
-  }));
+  requestTracker: (req, res, next) => next(),
+  trackDbQuery: () => {},
+  trackDbConnectionError: () => {},
+  updateDbPoolMetrics: () => {},
+  getMetrics: () => ({}),
+  recordUserSignup: () => {},
+  recordUserActivity: () => {}, // Make sure this is mocked
+  recordAuthAttempt: () => {},
+  recordPizzaSale: () => {}
+}));

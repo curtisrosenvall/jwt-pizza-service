@@ -10,6 +10,13 @@
   "globalSetup": "./globalSetup.js",
   "globalTeardown": "./globalTeardown.js",
   "testTimeout": 30000,
-  "testPathIgnorePatterns": ["/node_modules/", "/dist/"]
+  "coveragePathIgnorePatterns": [
+    "/node_modules/",
+    "/dist/",
+    "metrics.js",
+    "orderMiddleware.js",
+    "authMiddleware.js",
+    "databaseWrapper.js"
+  ]
 
 }

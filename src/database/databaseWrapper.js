@@ -1,7 +1,6 @@
 // databaseWrapper.js
-const mysql = require('mysql2/promise');
 const { DB } = require('./database');
-const { trackDbQuery, trackDbConnectionError, updateDbPoolMetrics, recordUserSignup } = require('../metrics');
+const { trackDbQuery, trackDbConnectionError, updateDbPoolMetrics } = require('../metrics');
 const config = require('../config.js');
 
 // Define slow query threshold in ms
@@ -11,7 +10,7 @@ const DB_SLOW_QUERY_THRESHOLD = 300;
 console.log('[DB] Checking for duplicate recordUserSignup calls');
 
 // Create a flag to prevent duplicate recordUserSignup calls
-let userSignupInProgress = false;
+// let userSignupInProgress = false;
 
 // Store the original addUser method
 const originalAddUser = DB.addUser;
@@ -22,7 +21,7 @@ DB.addUser = async function(user) {
   
   try {
     // Set the flag to indicate a signup is in progress
-    userSignupInProgress = true;
+    // userSignupInProgress = true;
     
     // Call the original method
     const result = await originalAddUser.apply(this, arguments);
@@ -37,7 +36,7 @@ DB.addUser = async function(user) {
   } finally {
     // Reset the flag after a short delay to ensure the auth router has time to process
     setTimeout(() => {
-      userSignupInProgress = false;
+      // userSignupInProgress = false;
     }, 1000);
   }
 };

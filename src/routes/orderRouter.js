@@ -3,6 +3,8 @@ const config = require('../config.js');
 const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
+const { trackOrderCreation } = require('../orderMiddleware');
+
 
 const orderRouter = express.Router();
 
@@ -39,6 +41,9 @@ orderRouter.endpoints = [
     response: { order: { franchiseId: 1, storeId: 1, items: [{ menuId: 1, description: 'Veggie', price: 0.05 }], id: 1 }, jwt: '1111111111' },
   },
 ];
+
+orderRouter.use(trackOrderCreation);
+
 
 // getMenu
 orderRouter.get(

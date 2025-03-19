@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
-const { recordUserSignup } = require('../metrics');
+const { recordUserSignup, recordUserActivity  } = require('../metrics');
 
 const authRouter = express.Router();
 
@@ -86,6 +86,11 @@ authRouter.put(
     const { email, password } = req.body;
     const user = await DB.getUser(email, password);
     const auth = await setAuth(user);
+    
+    // Record user activity with the auth token
+    recordUserActivity(auth);
+    
+    // Send response
     res.json({ user: user, token: auth });
   })
 );

@@ -17,8 +17,12 @@ export default [
   pluginJs.configs.recommended,
   {
     rules: {
-      'no-console': 'off',    // Allow console.log
-      'no-undef': 'error'     // Keep undefined variables as errors
+      'no-console': 'off',     // Allow console.log
+      'no-undef': 'error',     // Keep undefined variables as errors
+      'no-unused-vars': ['warn', { 
+        'argsIgnorePattern': '^_',  // Variables starting with underscore are ignored
+        'varsIgnorePattern': '^_'   // Same for function args
+      }]
     }
   }
 ];

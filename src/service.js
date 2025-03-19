@@ -5,16 +5,22 @@ const franchiseRouter = require('./routes/franchiseRouter.js');
 const healthRouter = require('./routes/healthRouter.js');
 const metrics = require('./metrics');
 const version = require('./version.json');
-
+const { trackAuthSuccess, trackTokenValidation, trackAuth } = require('./authMiddleware');
 const config = require('./config.js');
-
-// Initialize database with performance tracking
 require('./database/databaseWrapper');
+
 
 const app = express();
 
-// Add metrics middleware
 app.use(metrics.requestTracker);
+
+app.use(trackAuth);
+app.use(trackTokenValidation); // Track token validation on all routes
+app.use(trackAuthSuccess);     // Track successful authentications
+
+
+
+// Add metrics middleware
 
 app.use(setAuthUser);
 app.use(express.json());
@@ -60,6 +66,8 @@ app.use('*', (req, res) => {
     message: 'unknown endpoint',
   });
 });
+
+
 
 // Default error handler for all exceptions and errors.
 app.use((err, req, res, next) => {
