@@ -10,7 +10,11 @@ const metrics = {
   errors: 0,
   dbQueries: 0,
   dbErrors: 0,
-  dbLatency: 0
+  dbLatency: 0,
+  get_requests: 0,
+  post_requests: 0,
+  put_requests: 0,
+  delete_requests: 0
 };
 
 // Send metrics to Grafana every 5 seconds
@@ -25,6 +29,12 @@ setInterval(() => {
 
   // Request count (real data)
   sendMetricToGrafana('requests', metrics.requests, 'sum', '1');
+
+  // Request count by method
+  sendMetricToGrafana('get_requests', metrics.get_requests || 0, 'sum', '1');
+  sendMetricToGrafana('post_requests', metrics.post_requests || 0, 'sum', '1');
+  sendMetricToGrafana('put_requests', metrics.put_requests || 0, 'sum', '1');
+  sendMetricToGrafana('delete_requests', metrics.delete_requests || 0, 'sum', '1');
 
   // Latency (real data)
   sendMetricToGrafana('latency', metrics.latency, 'sum', 'ms');
@@ -53,41 +63,38 @@ function getMemoryUsagePercentage() {
 }
 
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
-    const metric = {
-      resourceMetrics: [
-        {
-          resource: {
-            attributes: [
-              {
-                key: "service.name",
-                value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
-              }
-            ]
-          },
-          scopeMetrics: [
+  const metric = {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
             {
-              metrics: [
-                {
-                  name: metricName,
-                  unit: unit,
-                  [type]: {
-                    dataPoints: [
-                      {
-                        asInt: Math.round(metricValue),
-                        timeUnixNano: Date.now() * 1000000,
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          ],
+              key: "service.name",
+              value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
+            }
+          ]
         },
-      ],
-    };
-  
-    // Rest of your function remains the same...
-  
+        scopeMetrics: [
+          {
+            metrics: [
+              {
+                name: metricName,
+                unit: unit,
+                [type]: {
+                  dataPoints: [
+                    {
+                      asInt: Math.round(metricValue),
+                      timeUnixNano: Date.now() * 1000000,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
 
   if (type === 'sum') {
     metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
@@ -99,7 +106,8 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
     method: 'POST',
     body: body,
     headers: { 
-      Authorization: `Bearer ${config.metrics.apiKey}`, 
+      // Updated authorization header format without "Bearer" prefix
+      'Authorization': config.metrics.apiKey,
       'Content-Type': 'application/json' 
     },
   })
@@ -108,19 +116,25 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
         response.text().then((text) => {
           console.error(`Failed to push metrics data to Grafana: ${text}`);
         });
+      } else {
+        console.log(`Successfully sent metric: ${metricName} = ${metricValue}`);
       }
     })
     .catch((error) => {
       console.error('Error pushing metrics:', error);
     });
-
 }
+
 // Request tracking middleware
 const requestTracker = (req, res, next) => {
   const start = Date.now();
   
   // Track request count
   metrics.requests++;
+  
+  // Track request by method
+  const method = req.method.toLowerCase();
+  metrics[`${method}_requests`] = (metrics[`${method}_requests`] || 0) + 1;
   
   // Track endpoint usage
   const endpoint = `${req.method} ${req.path}`;
@@ -185,7 +199,13 @@ const getMetrics = () => {
       errorRate: errorRate.toFixed(2) + '%',
       avgLatency: avgLatency.toFixed(2) + 'ms',
       statusCodes: metrics.statusCodes,
-      topEndpoints: getTopEndpoints(5)
+      topEndpoints: getTopEndpoints(5),
+      requestsByMethod: {
+        get: metrics.get_requests || 0,
+        post: metrics.post_requests || 0,
+        put: metrics.put_requests || 0,
+        delete: metrics.delete_requests || 0
+      }
     },
     database: {
       totalQueries: metrics.dbQueries,
@@ -230,5 +250,3 @@ module.exports = {
   trackDbQuery,
   getMetrics
 };
-
-// test
