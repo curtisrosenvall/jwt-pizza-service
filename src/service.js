@@ -5,9 +5,10 @@ const franchiseRouter = require('./routes/franchiseRouter.js');
 const healthRouter = require('./routes/healthRouter.js');
 const metrics = require('./metrics');
 const version = require('./version.json');
-const { trackAuthSuccess, trackTokenValidation, trackAuth } = require('./authMiddleware');
+const { trackAuthSuccess, trackTokenValidation, trackAuth} = require('./authMiddleware');
 const config = require('./config.js');
 require('./database/databaseWrapper');
+const logger = require('./logger.js');
 
 
 const app = express();
@@ -15,12 +16,14 @@ const app = express();
 app.use(metrics.requestTracker);
 
 app.use(trackAuth);
-app.use(trackTokenValidation); // Track token validation on all routes
-app.use(trackAuthSuccess);     // Track successful authentications
+app.use(trackTokenValidation); 
+app.use(trackAuthSuccess);     
+
+app.use(logger.httpLogger);
 
 
 
-// Add metrics middleware
+
 
 app.use(setAuthUser);
 app.use(express.json());
@@ -30,6 +33,10 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   next();
 });
 
@@ -67,12 +74,19 @@ app.use('*', (req, res) => {
   });
 });
 
+app.use(logger.errorLogger);
 
 
-// Default error handler for all exceptions and errors.
+
 app.use((err, req, res, next) => {
   res.status(err.statusCode ?? 500).json({ message: err.message, stack: err.stack });
   next();
+});
+
+logger.log('info', 'system', {
+  message: 'JWT Pizza API service started',
+  version: version.version,
+  environment: process.env.NODE_ENV || 'development'
 });
 
 module.exports = app;

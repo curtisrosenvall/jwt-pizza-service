@@ -40,7 +40,7 @@ async function createAdminUser() {
     roles: [{ role: Role.Admin }],
   };
   const user = await DB.addUser(userData);
-  // Return object with the raw password so we can login
+  
   return { ...user, password: userData.password };
 }
 
@@ -54,19 +54,19 @@ describe('Auth Router', () => {
   let testUserToken;
   let testUserId;
 
-  // We'll also test an admin user for the update route.
+  
   let adminUser;
-  // let adminToken;  // Commented out until tests are implemented
-  // let adminId;     // Commented out until tests are implemented
+  
+  
 
-  //
-  // ---------------------------------------------
-  // 1. Registration Tests
-  // ---------------------------------------------
-  //
+  
+  
+  
+  
+  
   describe('Register', () => {
     test('fail registration with missing fields', async () => {
-      // Missing password
+      
       const res = await request(app)
         .post('/api/auth')
         .send({ name: 'No Password', email: randomName() + '@test.com' });
@@ -88,20 +88,20 @@ describe('Auth Router', () => {
       expect(token).toBeDefined();
       expectValidJwt(token);
 
-      // The returned user should match (except password).
+      
       expect(user.name).toBe(testUser.name);
       expect(user.email).toBe(testUser.email);
 
-      testUserToken = token; // store for later
+      testUserToken = token; 
       testUserId = user.id;
     });
   });
 
-  //
-  // ---------------------------------------------
-  // 2. Login Tests
-  // ---------------------------------------------
-  //
+  
+  
+  
+  
+  
   describe('Login', () => {
     test('login user with valid credentials', async () => {
       const res = await request(app)
@@ -120,7 +120,7 @@ describe('Auth Router', () => {
     });
 
     test('login fails with invalid credentials', async () => {
-      // Wrong password
+      
       const res = await request(app)
         .put('/api/auth')
         .send({
@@ -128,19 +128,15 @@ describe('Auth Router', () => {
           password: 'wrongPassword',
         });
 
-      // In your DB code, invalid credentials throw a StatusCodeError with code 404,
-      // so adjust if needed:
+
       expect([400, 401, 404, 500]).toContain(res.status);
-      // Optionally test the message
-      // expect(res.body.message).toMatch(/unknown user/i);
+      
+      
     });
   });
 
-  //
-  // ---------------------------------------------
-  // 3. Logout Tests
-  // ---------------------------------------------
-  //
+
+  
   describe('Logout', () => {
     test('logout user with valid token', async () => {
       const res = await request(app)
@@ -159,14 +155,11 @@ describe('Auth Router', () => {
     });
   });
 
-  //
-  // ---------------------------------------------
-  // 4. Update User Tests
-  // ---------------------------------------------
-  //
+
+  
   describe('Update user', () => {
     beforeAll(async () => {
-      // 1) We need the user to be logged in again so we have a fresh token
+      
       const loginRes = await request(app)
         .put('/api/auth')
         .send({
@@ -178,52 +171,13 @@ describe('Auth Router', () => {
         testUserId = loginRes.body.user.id;
       }
 
-      // 2) Create (and login) an admin user
+      
       adminUser = await createAdminUser();
       const adminLoginRes = await request(app)
         .put('/api/auth')
         .send({ email: adminUser.email, password: adminUser.password });
-      if (adminLoginRes.status === 200) {
-        // adminToken = adminLoginRes.body.token;
-        // adminId = adminLoginRes.body.user.id;
-      }
     });
 
-    // test('user can update their own account', async () => {
-    //   const newEmail = randomName() + '@updated.com';
-    //   const res = await request(app)
-    //     .put(`/api/auth/${testUserId}`)
-    //     .set('Authorization', `Bearer ${testUserToken}`)
-    //     .send({ email: newEmail, password: 'newPass123' });
-
-    //   // Should succeed
-    //   expect(res.status).toBe(200);
-    //   // The server returns the updated user. Email should match our newEmail.
-    //   expect(res.body).toHaveProperty('email', newEmail);
-    // });
-
-    // test('non-admin user cannot update someone else', async () => {
-    //   // Attempt to update the admin with the diner's token => should fail
-    //   const res = await request(app)
-    //     .put(`/api/auth/${adminId}`)
-    //     .set('Authorization', `Bearer ${testUserToken}`)
-    //     .send({ email: randomName() + '@bad.com' });
-
-    //   expect(res.status).toBe(403);
-    //   expect(res.body.message).toMatch(/unauthorized/i);
-    // });
-
-    // test('admin can update another user', async () => {
-    //   // Admin tries to update our diner's account
-    //   const newEmail = randomName() + '@adminupdate.com';
-    //   const res = await request(app)
-    //     .put(`/api/auth/${testUserId}`)
-    //     .set('Authorization', `Bearer ${adminToken}`)
-    //     .send({ email: newEmail });
-
-    //   expect(res.status).toBe(200);
-    //   expect(res.body).toHaveProperty('email', newEmail);
-    // });
 
     test('update user fails with no token', async () => {
       const newEmail = randomName() + '@noauth.com';

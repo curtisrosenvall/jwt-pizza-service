@@ -1,9 +1,9 @@
 const config = require('./config');
 const os = require('os');
 
-// Store metrics data
+
 const metrics = {
-  // HTTP metrics
+  
   requests: 0,
   latency: 0,
   statusCodes: {},
@@ -14,60 +14,60 @@ const metrics = {
   put_requests: 0,
   delete_requests: 0,
   
-  // User metrics
+  
   user_signUps: 0,
   user_signUps_delta: 0,
   active_users: 0,
-  active_user_sessions: new Map(), // Maps user token/ID to last activity timestamp
+  active_user_sessions: new Map(), 
   
-  // Authentication metrics
+  
   auth_attempts: 0,
   auth_success: 0,
   auth_failure: 0,
   
-  // Authentication rates
+  
   auth_attempts_per_minute: 0,
   auth_success_per_minute: 0,
   auth_failure_per_minute: 0,
   
-  // Current minute counters for auth
+  
   current_minute_auth_attempts: 0,
   current_minute_auth_success: 0,
   current_minute_auth_failure: 0,
   
-  // Pizza sales metrics
+  
   pizza_sales: 0,
   pizza_sales_failures: 0,
   pizza_revenue: 0,
   
-  // Per-minute rates for pizza
+  
   pizza_sales_per_minute: 0,
   pizza_failures_per_minute: 0,
   pizza_revenue_per_minute: 0,
   
-  // Current minute counters for pizza
+  
   current_minute_pizza_sales: 0,
   current_minute_pizza_failures: 0,
   current_minute_pizza_revenue: 0,
   
-  // Request rate metrics
+  
   requests_per_minute: 0,
   get_requests_per_minute: 0,
   post_requests_per_minute: 0,
   put_requests_per_minute: 0,
   delete_requests_per_minute: 0,
   
-  // Current minute counters
+  
   current_minute_requests: 0,
   current_minute_get: 0,
   current_minute_post: 0,
   current_minute_put: 0,
   current_minute_delete: 0,
   
-  // Time tracking
+  
   last_minute_timestamp: Date.now(),
   
-  // Database metrics
+  
   dbQueries: 0,
   dbErrors: 0,
   dbLatency: 0,
@@ -83,13 +83,20 @@ const metrics = {
   dbSlowQueries: 0
 };
 
-// Track recent signups to prevent duplicates
+
+const factoryMetrics = {
+  requests: {},
+  errors: {},
+  durations: []
+};
+
+
 const recentSignups = new Map();
 
-// Track recent pizza orders to prevent duplicates
+
 const recentOrders = new Map();
 
-// Track changes to metrics.user_signUps property
+
 const trackMetricsChanges = () => {
   let userSignUpsValue = metrics.user_signUps;
   
@@ -102,10 +109,10 @@ const trackMetricsChanges = () => {
         console.log(`---------- METRICS CHANGE DETECTED ----------`);
         console.log(`metrics.user_signUps changed: ${userSignUpsValue} -> ${newValue}`);
         
-        // Log stack trace to find where the change came from
+        
         const stack = new Error().stack;
         console.log('Changed from:');
-        console.log(stack.split('\n').slice(1, 5).join('\n')); // Show 4 levels
+        console.log(stack.split('\n').slice(1, 5).join('\n')); 
         
         console.log('--------------------------------------------');
       }
@@ -116,17 +123,17 @@ const trackMetricsChanges = () => {
   });
 };
 
-// Initialize the property tracker
+
 trackMetricsChanges();
 
-// Calculate requests per minute
+
 function calculateRequestsPerMinute() {
   const now = Date.now();
   const elapsedMs = now - metrics.last_minute_timestamp;
   
-  // Only update if at least 5 seconds have passed
+  
   if (elapsedMs >= 5000) {
-    // Calculate requests per minute (scaled based on elapsed time)
+    
     const minuteRatio = 60000 / elapsedMs;
     
     metrics.requests_per_minute = Math.round(metrics.current_minute_requests * minuteRatio);
@@ -135,17 +142,17 @@ function calculateRequestsPerMinute() {
     metrics.put_requests_per_minute = Math.round(metrics.current_minute_put * minuteRatio);
     metrics.delete_requests_per_minute = Math.round(metrics.current_minute_delete * minuteRatio);
     
-    // Authentication metrics per minute
+    
     metrics.auth_attempts_per_minute = Math.round(metrics.current_minute_auth_attempts * minuteRatio);
     metrics.auth_success_per_minute = Math.round(metrics.current_minute_auth_success * minuteRatio);
     metrics.auth_failure_per_minute = Math.round(metrics.current_minute_auth_failure * minuteRatio);
     
-    // Pizza metrics per minute
+    
     metrics.pizza_sales_per_minute = Math.round(metrics.current_minute_pizza_sales * minuteRatio);
     metrics.pizza_failures_per_minute = Math.round(metrics.current_minute_pizza_failures * minuteRatio);
     metrics.pizza_revenue_per_minute = parseFloat((metrics.current_minute_pizza_revenue * minuteRatio).toFixed(8));
     
-    // Reset counters
+    
     metrics.current_minute_requests = 0;
     metrics.current_minute_get = 0;
     metrics.current_minute_post = 0;
@@ -158,22 +165,22 @@ function calculateRequestsPerMinute() {
     metrics.current_minute_pizza_failures = 0;
     metrics.current_minute_pizza_revenue = 0;
     
-    // Update timestamp
+    
     metrics.last_minute_timestamp = now;
     
-    // Log the calculated values (only if there were requests)
+    
     if (metrics.requests_per_minute > 0) {
       console.log(`[Metrics] Requests per minute: ${metrics.requests_per_minute} (total)`);
     }
     
-    // Log authentication rates (only if there were auth attempts)
+    
     if (metrics.auth_attempts_per_minute > 0) {
       console.log(`[Metrics] Auth attempts per minute: ${metrics.auth_attempts_per_minute} ` +
                  `(Success: ${metrics.auth_success_per_minute}, ` +
                  `Failure: ${metrics.auth_failure_per_minute})`);
     }
     
-    // Log pizza metrics (only if there were orders)
+    
     if (metrics.pizza_sales_per_minute > 0 || metrics.pizza_failures_per_minute > 0) {
       console.log(`[Metrics] Pizza metrics - Sales: ${metrics.pizza_sales_per_minute}/min, ` +
                  `Failures: ${metrics.pizza_failures_per_minute}/min, ` +
@@ -182,14 +189,14 @@ function calculateRequestsPerMinute() {
   }
 }
 
-// Record an authentication attempt
+
 function recordAuthAttempt(success) {
   try {
-    // Increment total counters
+    
     metrics.auth_attempts++;
     metrics.current_minute_auth_attempts++;
     
-    // Track success/failure
+    
     if (success) {
       metrics.auth_success++;
       metrics.current_minute_auth_success++;
@@ -204,25 +211,25 @@ function recordAuthAttempt(success) {
   }
 }
 
-// Record pizza sale or failure with latency
+
 function recordPizzaSale(items, success = true, duration = 0) {
   try {
-    // Generate a simple identifier for this order to prevent duplicates
+    
     const orderItems = items || [];
     const orderId = `${Date.now()}-${orderItems.length}`;
     
-    // Check for duplicate orders in close succession
+    
     if (recentOrders.has(orderId)) {
       console.log(`[Metrics] Prevented duplicate order tracking: ${orderId}`);
       return;
     }
     
-    // Record this order
+    
     recentOrders.set(orderId, Date.now());
     
-    // Clean up old order entries
+    
     if (recentOrders.size > 100) {
-      const expireTime = Date.now() - 5000; // 5 seconds
+      const expireTime = Date.now() - 5000; 
       for (const [key, time] of recentOrders.entries()) {
         if (time < expireTime) {
           recentOrders.delete(key);
@@ -231,25 +238,25 @@ function recordPizzaSale(items, success = true, duration = 0) {
     }
     
     if (success) {
-      // Count total pizzas sold
+      
       const pizzaCount = orderItems.length;
       metrics.pizza_sales += pizzaCount;
       metrics.current_minute_pizza_sales += pizzaCount;
       
-      // Calculate revenue
+      
       const revenue = orderItems.reduce((total, item) => total + (parseFloat(item.price) || 0), 0);
       metrics.pizza_revenue += revenue;
       metrics.current_minute_pizza_revenue += revenue;
       
       console.log(`[Metrics] Recorded sale of ${pizzaCount} pizzas, revenue: ${revenue.toFixed(8)} BTC`);
     } else {
-      // Track failures
+      
       metrics.pizza_sales_failures++;
       metrics.current_minute_pizza_failures++;
       console.log('[Metrics] Recorded pizza order failure');
     }
     
-    // If we have a duration, send it as a pizza_creation_latency metric
+    
     if (duration > 0) {
       sendMetricToGrafana('pizza_creation_latency', duration, 'gauge', 'ms');
     }
@@ -257,117 +264,117 @@ function recordPizzaSale(items, success = true, duration = 0) {
     console.error('[Metrics] Error recording pizza sale:', error);
   }
 }
-// Update active users count
+
 function updateActiveUserCount() {
   const now = Date.now();
-  const activeWindowMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+  const activeWindowMs = 15 * 60 * 1000; 
   const expiryTime = now - activeWindowMs;
   
-  // Remove expired sessions
+  
   for (const [token, timestamp] of metrics.active_user_sessions.entries()) {
     if (timestamp < expiryTime) {
       metrics.active_user_sessions.delete(token);
     }
   }
   
-  // Update the active users count
+  
   metrics.active_users = metrics.active_user_sessions.size;
   
-  // Only log if there are active users
+  
   if (metrics.active_users > 0) {
     console.log(`[Metrics] Active users in last 15 minutes: ${metrics.active_users}`);
   }
 }
 
-// Record user activity
+
 function recordUserActivity(token) {
   if (!token) return;
   
-  // Update the last activity timestamp for this user
+  
   metrics.active_user_sessions.set(token, Date.now());
 }
 
-// Send metrics to Grafana every 5 seconds
+
 setInterval(() => {
-  // Calculate requests per minute
+  
   calculateRequestsPerMinute();
   
-  // Update active users count
+  
   updateActiveUserCount();
 
-  // CPU usage (real data)
+  
   const cpuValue = getCpuUsagePercentage();
   sendMetricToGrafana('cpu', cpuValue, 'gauge', '%');
 
-  // Memory usage (real data)
+  
   const memoryValue = getMemoryUsagePercentage();
   sendMetricToGrafana('memory', memoryValue, 'gauge', '%');
 
-  // Request count (real data)
+  
   sendMetricToGrafana('requests', metrics.requests, 'sum', '1');
 
-  // Request count by method
+  
   sendMetricToGrafana('get_requests', metrics.get_requests || 0, 'sum', '1');
   sendMetricToGrafana('post_requests', metrics.post_requests || 0, 'sum', '1');
   sendMetricToGrafana('put_requests', metrics.put_requests || 0, 'sum', '1');
   sendMetricToGrafana('delete_requests', metrics.delete_requests || 0, 'sum', '1');
 
-  // Requests per minute
+  
   sendMetricToGrafana('requests_per_minute', metrics.requests_per_minute, 'gauge', 'rpm');
   sendMetricToGrafana('get_requests_per_minute', metrics.get_requests_per_minute, 'gauge', 'rpm');
   sendMetricToGrafana('post_requests_per_minute', metrics.post_requests_per_minute, 'gauge', 'rpm');
   sendMetricToGrafana('put_requests_per_minute', metrics.put_requests_per_minute, 'gauge', 'rpm');
   sendMetricToGrafana('delete_requests_per_minute', metrics.delete_requests_per_minute, 'gauge', 'rpm');
 
-  // Authentication metrics
+  
   sendMetricToGrafana('auth_attempts_per_minute', metrics.auth_attempts_per_minute, 'gauge', 'rpm');
   sendMetricToGrafana('auth_success_per_minute', metrics.auth_success_per_minute, 'gauge', 'rpm');
   sendMetricToGrafana('auth_failure_per_minute', metrics.auth_failure_per_minute, 'gauge', 'rpm');
 
-  // Pizza metrics
+  
   sendMetricToGrafana('pizza_sales_per_minute', metrics.pizza_sales_per_minute, 'gauge', 'pizzas/min');
   sendMetricToGrafana('pizza_failures_per_minute', metrics.pizza_failures_per_minute, 'gauge', 'failures/min');
   sendMetricToGrafana('pizza_revenue_per_minute', metrics.pizza_revenue_per_minute, 'gauge', 'BTC/min');
 
-  // Active users
+  
   sendMetricToGrafana('active_users', metrics.active_users, 'gauge', 'users');
 
-  // Latency (real data)
+  
   sendMetricToGrafana('latency', metrics.latency, 'sum', 'ms');
 
-  // Error rate (real data)
+  
   const errorRate = metrics.requests > 0 ? (metrics.errors / metrics.requests) * 100 : 0;
   sendMetricToGrafana('error_rate', errorRate, 'gauge', '%');
 
-  // DB metrics
+  
   sendMetricToGrafana('db_queries', metrics.dbQueries, 'sum', '1');
   sendMetricToGrafana('db_errors', metrics.dbErrors, 'sum', '1');
   sendMetricToGrafana('db_latency', metrics.dbLatency, 'sum', 'ms');
   
-  // User signup metrics
+  
   if (metrics.user_signUps_delta > 0) {
     console.log(`Sending user_signup delta: ${metrics.user_signUps_delta}`);
     sendMetricToGrafana('user_signup', metrics.user_signUps_delta, 'sum', '1');
     
-    // Reset the delta after sending
+    
     metrics.user_signUps_delta = 0;
   }
   
-  // New DB metrics
+  
   sendMetricToGrafana('db_connection_errors', metrics.dbConnectionErrors, 'sum', '1');
   sendMetricToGrafana('db_query_errors', metrics.dbQueryErrors, 'sum', '1');
   sendMetricToGrafana('db_slow_queries', metrics.dbSlowQueries, 'sum', '1');
   
-  // DB query types
+  
   Object.entries(metrics.dbQueryTypes).forEach(([type, count]) => {
     sendMetricToGrafana(`db_query_${type}`, count, 'sum', '1');
   });
   
-  // Average DB query time
+  
   const avgDbQueryTime = metrics.dbQueries > 0 ? metrics.dbLatency / metrics.dbQueries : 0;
   sendMetricToGrafana('avg_db_query_time', avgDbQueryTime, 'gauge', 'ms');
   
-  // DB error rate
+  
   const dbErrorRate = metrics.dbQueries > 0 ? (metrics.dbErrors / metrics.dbQueries) * 100 : 0;
   sendMetricToGrafana('db_error_rate', dbErrorRate, 'gauge', '%');
 }, 5000);
@@ -385,7 +392,7 @@ function getMemoryUsagePercentage() {
   return parseFloat(memoryUsage.toFixed(2));
 }
 
-// Helper function to read auth token
+
 function readAuthToken(req) {
   const authHeader = req.headers.authorization;
   if (authHeader) {
@@ -397,22 +404,22 @@ function readAuthToken(req) {
 function recordUserSignup(userData) {
   const email = userData?.email || 'unknown';
   
-  // Check if this email was recently counted (within 2 seconds)
+  
   const now = Date.now();
   if (recentSignups.has(email)) {
     const lastTime = recentSignups.get(email);
-    if (now - lastTime < 2000) { // 2 seconds
+    if (now - lastTime < 2000) { 
       console.log(`[METRICS] Prevented duplicate signup for ${email} (${now - lastTime}ms since last call)`);
       return;
     }
   }
   
-  // Record this signup time
+  
   recentSignups.set(email, now);
   
-  // Clean up old entries periodically
+  
   if (recentSignups.size > 100) {
-    const expireTime = now - 5000; // 5 seconds
+    const expireTime = now - 5000; 
     for (const [key, time] of recentSignups.entries()) {
       if (time < expireTime) {
         recentSignups.delete(key);
@@ -422,39 +429,39 @@ function recordUserSignup(userData) {
   
   console.log('METRICS: Recording user signup for', email);
   try {
-    // Increment main counter
+    
     metrics.user_signUps++;
     
-    // Also increment the delta counter that tracks changes since last report
+    
     metrics.user_signUps_delta++;
     
-    // Log locally for debugging
+    
     console.log(`[METRIC] User signup: ${email}, total: ${metrics.user_signUps}, delta: ${metrics.user_signUps_delta}`);
   } catch (error) {
     console.error('Failed to record user signup metric:', error);
   }
 }
 
-// Wrap the original sendMetricToGrafana function
-// Updated sendMetricToGrafana function to properly handle decimal values
+
+
 function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
   if (!config.metrics || !config.metrics.apiKey || !config.metrics.url) {
     console.log(`[Metrics] Skipping metric ${metricName} - Missing configuration`);
     return;
   }
   
-  // Special handling for decimal metrics
+  
   const isDecimalValue = Number(metricValue) !== Math.floor(Number(metricValue));
   
-  // Create proper data point based on value type
+  
   let dataPoint;
   
   if (isDecimalValue) {
-    // Use asDouble for decimal values
+    
     dataPoint = { asDouble: Number(metricValue) };
     console.log(`[Metrics Debug] Using asDouble for decimal metric ${metricName} = ${metricValue}`);
   } else {
-    // Use asInt for integer values
+    
     dataPoint = { asInt: Math.round(Number(metricValue)) };
   }
   
@@ -498,13 +505,13 @@ function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
 
   const body = JSON.stringify(metric);
   
-  // Add extra debug for revenue metric
+  
   if (metricName === 'pizza_revenue_per_minute') {
     console.log(`[Metrics Debug] Sending revenue metric payload:`);
     console.log(JSON.stringify(metric, null, 2));
   }
   
-  // Use Basic auth with the full API key
+  
   const encodedCredentials = Buffer.from(config.metrics.apiKey).toString('base64');
   
   fetch(`${config.metrics.url}`, {
@@ -516,7 +523,7 @@ function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
     },
   })
     .then((response) => {
-      // Only log important metrics or errors
+      
       const isImportantMetric = [
         'user_signup', 
         'active_users', 
@@ -532,7 +539,7 @@ function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
           console.error(`[Metrics Error] Failed to push data to Grafana: ${text}`);
         });
       } else if (isImportantMetric) {
-        // For decimal values, note that we're using asDouble
+        
         const valueTypeStr = isDecimalValue ? 'asDouble' : 'asInt';
         console.log(`[Metrics] Successfully sent metric: ${metricName} = ${metricValue} (using ${valueTypeStr})`);
       }
@@ -542,7 +549,7 @@ function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
     });
 }
 
-// Create instrumented version of sendMetricToGrafana
+
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
   if (metricName === 'user_signup') {
     console.log(`---------- SENDING USER SIGNUP METRIC ----------`);
@@ -552,20 +559,20 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   return originalSendMetricToGrafana(metricName, metricValue, type, unit);
 }
 
-// Request tracking middleware
+
 const requestTracker = (req, res, next) => {
   try {
     const start = Date.now();
     
-    // Track request count
+    
     metrics.requests++;
     metrics.current_minute_requests++;
     
-    // Track request by method
+    
     const method = req.method.toLowerCase();
     metrics[`${method}_requests`] = (metrics[`${method}_requests`] || 0) + 1;
     
-    // Also increment the current minute counter for this method
+    
     switch (method) {
       case 'get':
         metrics.current_minute_get++;
@@ -581,11 +588,11 @@ const requestTracker = (req, res, next) => {
         break;
     }
     
-    // Track endpoint usage
+    
     const endpoint = `${req.method} ${req.path}`;
     metrics.endpoints[endpoint] = (metrics.endpoints[endpoint] || 0) + 1;
     
-    // Record user activity if authenticated
+    
     try {
       const token = readAuthToken(req);
       if (token) {
@@ -595,60 +602,56 @@ const requestTracker = (req, res, next) => {
       console.error('[Metrics] Error recording user activity:', activityError);
     }
     
-    // Capture original end method
+    
     const originalEnd = res.end;
     
-    // Override end method to capture metrics
-    // In the res.end function of requestTracker middleware
+    
+    
     res.end = function(...args) {
   try {
-    // Calculate request duration
+    
     const duration = Date.now() - start;
     
-    // Still track cumulative latency (but don't use this for visualization)
+
     metrics.latency += duration;
     
-    // Send individual request latency as a gauge
+
     sendMetricToGrafana('request_latency', duration, 'gauge', 'ms');
     
-    // Rest of your code...
+
   } catch (error) {
     console.error('[Metrics] Error in response end handler:', error);
   }
   
-  // Call original end method
+
   return originalEnd.apply(this, args);
 };
     
     next();
   } catch (error) {
     console.error('[Metrics] Error in requestTracker middleware:', error);
-    next(); // Continue even if there's an error in metrics
+    next(); 
   }
 };
 
-// Enhanced database metrics tracking with error handling
 const trackDbQuery = (duration, success = true, queryType = 'unknown') => {
   try {
-    // Increment total query count
     metrics.dbQueries++;
     
-    // Add query duration to total latency
     metrics.dbLatency += duration;
     
-    // Track by query type (with safeguards)
     if (queryType && metrics.dbQueryTypes[queryType] !== undefined) {
       metrics.dbQueryTypes[queryType]++;
     } else {
       metrics.dbQueryTypes.unknown++;
     }
     
-    // Track if it was a slow query
-    if (duration > 300) { // 300ms threshold
+
+    if (duration > 300) { 
       metrics.dbSlowQueries++;
     }
     
-    // Track errors
+
     if (!success) {
       metrics.dbErrors++;
       metrics.dbQueryErrors++;
@@ -658,7 +661,6 @@ const trackDbQuery = (duration, success = true, queryType = 'unknown') => {
   }
 };
 
-// Track database connection errors
 const trackDbConnectionError = () => {
   try {
     metrics.dbConnectionErrors++;
@@ -667,7 +669,6 @@ const trackDbConnectionError = () => {
   }
 };
 
-// Update connection pool metrics
 const updateDbPoolMetrics = (totalConnections, usedConnections, queueSize = 0) => {
   try {
     sendMetricToGrafana('db_pool_size', totalConnections, 'gauge', '1');
@@ -678,7 +679,73 @@ const updateDbPoolMetrics = (totalConnections, usedConnections, queueSize = 0) =
   }
 };
 
-// Get current metrics for API endpoint
+function trackFactoryRequest(endpoint, method, statusCode, duration) {
+  const key = `${method}:${endpoint}`;
+  
+  if (!factoryMetrics.requests[key]) {
+    factoryMetrics.requests[key] = {
+      success: 0,
+      failure: 0,
+      totalDuration: 0,
+      count: 0
+    };
+  }
+  
+  factoryMetrics.requests[key].count++;
+  factoryMetrics.requests[key].totalDuration += duration;
+  
+
+  if (statusCode >= 200 && statusCode < 300) {
+    factoryMetrics.requests[key].success++;
+  } else {
+    factoryMetrics.requests[key].failure++;
+  }
+  
+
+  factoryMetrics.durations.push({
+    endpoint,
+    method,
+    statusCode,
+    duration,
+    timestamp: Date.now()
+  });
+  
+
+  if (factoryMetrics.durations.length > 1000) {
+    factoryMetrics.durations.shift();
+  }
+  
+  
+}
+
+function trackFactoryError(endpoint, method, statusCode) {
+  const key = `${method}:${endpoint}:${statusCode}`;
+  
+
+  if (!factoryMetrics.errors[key]) {
+    factoryMetrics.errors[key] = 0;
+  }
+  factoryMetrics.errors[key]++;
+  
+
+  console.log(`[Metrics] Factory error: ${method} ${endpoint} - Status: ${statusCode}`);
+}
+
+function getFactoryMetrics() {
+  return {
+    ...factoryMetrics,
+    summary: {
+      totalRequests: Object.values(factoryMetrics.requests).reduce((sum, val) => sum + val.count, 0),
+      totalErrors: Object.values(factoryMetrics.errors).reduce((sum, val) => sum + val, 0),
+      averageDuration: factoryMetrics.durations.length > 0 
+        ? factoryMetrics.durations.reduce((sum, val) => sum + val.duration, 0) / factoryMetrics.durations.length 
+        : 0
+    }
+  };
+}
+
+
+
 const getMetrics = () => {
   const avgLatency = metrics.requests > 0 ? metrics.latency / metrics.requests : 0;
   const errorRate = metrics.requests > 0 ? (metrics.errors / metrics.requests) * 100 : 0;
@@ -750,7 +817,7 @@ const getMetrics = () => {
   };
 };
 
-// Helper function to get top N endpoints by usage
+
 function getTopEndpoints(n) {
   return Object.entries(metrics.endpoints)
     .sort((a, b) => b[1] - a[1])
@@ -760,8 +827,6 @@ function getTopEndpoints(n) {
       return obj;
     }, {});
 }
-
-// Helper function to format uptime
 function formatUptime(seconds) {
   const days = Math.floor(seconds / 86400);
   seconds %= 86400;
@@ -779,9 +844,8 @@ function formatUptime(seconds) {
   return parts.join(' ');
 }
 
-// Log message about metrics being enabled
+
 console.log('[Metrics] Metrics system initialized');
-// Log message about metrics being enabled
 console.log('[Metrics] Metrics system initialized');
 
 module.exports = {
@@ -793,5 +857,8 @@ module.exports = {
   recordUserSignup,
   recordUserActivity,
   recordAuthAttempt,
-  recordPizzaSale
+  recordPizzaSale,
+  trackFactoryRequest,
+  trackFactoryError,
+  getFactoryMetrics
 };

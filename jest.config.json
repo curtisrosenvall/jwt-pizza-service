@@ -16,7 +16,9 @@
     "metrics.js",
     "orderMiddleware.js",
     "authMiddleware.js",
-    "databaseWrapper.js"
+    "databaseWrapper.js",
+    "factoryWrapper.js",
+    "logger.js"
   ]
 
 }

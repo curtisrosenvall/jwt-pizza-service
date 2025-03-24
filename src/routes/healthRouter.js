@@ -1,11 +1,11 @@
-// routes/healthRouter.js
+
 
 const express = require('express');
 const { getMetrics } = require('../metrics');
 const router = express.Router();
 const version = require('../version.json');
 
-// Define the router endpoints for documentation
+
 router.endpoints = [
   {
     method: 'GET',
@@ -21,7 +21,7 @@ router.endpoints = [
   }
 ];
 
-// Basic health check endpoint
+
 router.get('/status', (req, res) => {
   res.json({
     status: 'ok',
@@ -30,7 +30,7 @@ router.get('/status', (req, res) => {
   });
 });
 
-// Detailed metrics endpoint
+
 router.get('/metrics', (req, res) => {
   res.json(getMetrics());
 });

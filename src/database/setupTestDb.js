@@ -10,14 +10,14 @@ async function setupTestDatabase() {
   });
 
   try {
-    // Drop test database if exists
+    
     await connection.query(`DROP DATABASE IF EXISTS ${config.db.connection.database}`);
     
-    // Create test database
+    
     await connection.query(`CREATE DATABASE ${config.db.connection.database}`);
     await connection.query(`USE ${config.db.connection.database}`);
     
-    // Create tables
+    
     for (const statement of tableCreateStatements) {
       await connection.query(statement);
     }

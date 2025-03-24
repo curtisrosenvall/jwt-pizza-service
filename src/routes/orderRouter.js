@@ -45,7 +45,7 @@ orderRouter.endpoints = [
 orderRouter.use(trackOrderCreation);
 
 
-// getMenu
+
 orderRouter.get(
   '/menu',
   asyncHandler(async (req, res) => {
@@ -53,7 +53,7 @@ orderRouter.get(
   })
 );
 
-// addMenuItem
+
 orderRouter.put(
   '/menu',
   authRouter.authenticateToken,
@@ -68,7 +68,7 @@ orderRouter.put(
   })
 );
 
-// getOrders
+
 orderRouter.get(
   '/',
   authRouter.authenticateToken,
@@ -77,7 +77,7 @@ orderRouter.get(
   })
 );
 
-// createOrder
+
 orderRouter.post(
   '/',
   authRouter.authenticateToken,
