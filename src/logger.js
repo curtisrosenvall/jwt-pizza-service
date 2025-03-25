@@ -1,4 +1,4 @@
-const config = require('../src/config');
+const config = require('./config');
 
 class Logger {
   constructor() {
@@ -12,9 +12,11 @@ class Logger {
     console.log('[Logger] Source configured:', config.logging.source || 'undefined');
   }
 
+
   httpLogger = (req, res, next) => {
     console.log(`[Logger] HTTP Request: ${req.method} ${req.originalUrl || req.url}`);
     
+
     req._startTime = Date.now();
     
     const originalUrl = req.originalUrl || req.url;
