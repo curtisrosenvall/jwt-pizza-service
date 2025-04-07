@@ -13,6 +13,7 @@ const metrics = {
   post_requests: 0,
   put_requests: 0,
   delete_requests: 0,
+  last_pizza_sale_timestamp: Date.now(),
   
   
   user_signUps: 0,
@@ -149,6 +150,9 @@ function calculateRequestsPerMinute() {
   const now = Date.now();
   const elapsedMs = now - metrics.last_minute_timestamp;
   
+  if (now - metrics.last_pizza_sale_timestamp > 30000) { // 30 seconds
+    metrics.current_minute_pizza_sales = 0;
+  }
   
   if (elapsedMs >= 5000) {
     
@@ -189,7 +193,7 @@ function calculateRequestsPerMinute() {
     metrics.current_minute_auth_attempts = 0;
     metrics.current_minute_auth_success = 0;
     metrics.current_minute_auth_failure = 0;
-    metrics.current_minute_pizza_sales = 0;
+    // metrics.current_minute_pizza_sales = 0;
     metrics.current_minute_pizza_failures = 0;
     metrics.current_minute_pizza_revenue = 0;
     metrics.current_minute_pizza_latency = 0;
@@ -245,7 +249,7 @@ function recordAuthAttempt(success) {
 
 function recordPizzaSale(items, success = true, duration = 0, stagesLatency = {}) {
   try {
-    
+    metrics.last_pizza_sale_timestamp = Date.now();
     const orderItems = items || [];
     const orderId = `${Date.now()}-${orderItems.length}`;
     
