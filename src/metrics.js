@@ -575,17 +575,23 @@ const requestTracker = (req, res, next) => {
     
     switch (method) {
       case 'get':
+        metrics.get_requests++;
         metrics.current_minute_get++;
         break;
       case 'post':
+        metrics.post_requests++;
         metrics.current_minute_post++;
         break;
       case 'put':
+        metrics.put_requests++;
         metrics.current_minute_put++;
         break;
       case 'delete':
+        metrics.delete_requests++;
         metrics.current_minute_delete++;
         break;
+      default:
+        console.log(`[Metrics] Unknown HTTP method: ${req.method}`);
     }
     
     
