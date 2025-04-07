@@ -166,7 +166,7 @@ function calculateRequestsPerMinute() {
     metrics.auth_failure_per_minute = Math.round(metrics.current_minute_auth_failure * minuteRatio);
     
     
-    metrics.pizza_sales_per_minute = Math.round(metrics.current_minute_pizza_sales * minuteRatio);
+    metrics.pizza_sales_per_minute = metrics.current_minute_pizza_sales;
     metrics.pizza_failures_per_minute = Math.round(metrics.current_minute_pizza_failures * minuteRatio);
     metrics.pizza_revenue_per_minute = parseFloat((metrics.current_minute_pizza_revenue * minuteRatio).toFixed(8));
     
@@ -271,6 +271,8 @@ function recordPizzaSale(items, success = true, duration = 0, stagesLatency = {}
     if (success) {
       
       const pizzaCount = orderItems.length;
+      console.log('[Metrics Debug] Order items:', JSON.stringify(orderItems));
+      console.log('[Metrics Debug] Recording order with ID:', orderId);
       metrics.pizza_sales += pizzaCount;
       metrics.current_minute_pizza_sales += pizzaCount;
       
