@@ -50,6 +50,24 @@ const metrics = {
   current_minute_pizza_failures: 0,
   current_minute_pizza_revenue: 0,
   
+  // Pizza latency metrics
+  pizza_latency_total: 0,
+  pizza_latency_count: 0,
+  pizza_latency_avg: 0,
+  pizza_latency_max: 0,
+  pizza_latency_min: Infinity,
+  
+  // Pizza latency per minute
+  pizza_latency_per_minute: 0,
+  current_minute_pizza_latency: 0,
+  current_minute_pizza_latency_count: 0,
+  
+  // Pizza processing stages latency metrics
+  pizza_preparation_latency: 0,
+  pizza_baking_latency: 0,
+  pizza_packaging_latency: 0,
+  pizza_payment_processing_latency: 0,
+  
   
   requests_per_minute: 0,
   get_requests_per_minute: 0,
@@ -152,6 +170,16 @@ function calculateRequestsPerMinute() {
     metrics.pizza_failures_per_minute = Math.round(metrics.current_minute_pizza_failures * minuteRatio);
     metrics.pizza_revenue_per_minute = parseFloat((metrics.current_minute_pizza_revenue * minuteRatio).toFixed(8));
     
+    // New pizza latency calculation
+    if (metrics.current_minute_pizza_latency_count > 0) {
+      // Calculate average latency per minute
+      metrics.pizza_latency_per_minute = Math.round(
+        metrics.current_minute_pizza_latency / metrics.current_minute_pizza_latency_count
+      );
+    } else {
+      metrics.pizza_latency_per_minute = 0;
+    }
+    
     
     metrics.current_minute_requests = 0;
     metrics.current_minute_get = 0;
@@ -164,6 +192,8 @@ function calculateRequestsPerMinute() {
     metrics.current_minute_pizza_sales = 0;
     metrics.current_minute_pizza_failures = 0;
     metrics.current_minute_pizza_revenue = 0;
+    metrics.current_minute_pizza_latency = 0;
+    metrics.current_minute_pizza_latency_count = 0;
     
     
     metrics.last_minute_timestamp = now;
@@ -184,7 +214,8 @@ function calculateRequestsPerMinute() {
     if (metrics.pizza_sales_per_minute > 0 || metrics.pizza_failures_per_minute > 0) {
       console.log(`[Metrics] Pizza metrics - Sales: ${metrics.pizza_sales_per_minute}/min, ` +
                  `Failures: ${metrics.pizza_failures_per_minute}/min, ` +
-                 `Revenue: ${metrics.pizza_revenue_per_minute.toFixed(8)} BTC/min`);
+                 `Revenue: ${metrics.pizza_revenue_per_minute.toFixed(8)} BTC/min, ` +
+                 `Avg Latency: ${metrics.pizza_latency_per_minute}ms`);
     }
   }
 }
@@ -212,7 +243,7 @@ function recordAuthAttempt(success) {
 }
 
 
-function recordPizzaSale(items, success = true, duration = 0) {
+function recordPizzaSale(items, success = true, duration = 0, stagesLatency = {}) {
   try {
     
     const orderItems = items || [];
@@ -249,16 +280,64 @@ function recordPizzaSale(items, success = true, duration = 0) {
       metrics.current_minute_pizza_revenue += revenue;
       
       console.log(`[Metrics] Recorded sale of ${pizzaCount} pizzas, revenue: ${revenue.toFixed(8)} BTC`);
+      
+      // Enhanced latency tracking
+      if (duration > 0) {
+        // Update total latency metrics
+        metrics.pizza_latency_total += duration;
+        metrics.pizza_latency_count++;
+        
+        // Update per-minute latency metrics
+        metrics.current_minute_pizza_latency += duration;
+        metrics.current_minute_pizza_latency_count++;
+        
+        // Update min/max latency
+        metrics.pizza_latency_max = Math.max(metrics.pizza_latency_max, duration);
+        metrics.pizza_latency_min = duration < metrics.pizza_latency_min ? duration : metrics.pizza_latency_min;
+        
+        // Calculate average latency
+        metrics.pizza_latency_avg = metrics.pizza_latency_total / metrics.pizza_latency_count;
+        
+        // Log latency
+        console.log(`[Metrics] Pizza order processing time: ${duration}ms (avg: ${metrics.pizza_latency_avg.toFixed(2)}ms)`);
+        
+        // Send latency metric to Grafana
+        sendMetricToGrafana('pizza_order_latency', duration, 'gauge', 'ms');
+        sendMetricToGrafana('pizza_order_latency_avg', metrics.pizza_latency_avg, 'gauge', 'ms');
+      }
+      
+      // Track detailed processing stages if provided
+      if (stagesLatency) {
+        if (stagesLatency.preparation) {
+          metrics.pizza_preparation_latency += stagesLatency.preparation;
+          sendMetricToGrafana('pizza_preparation_latency', stagesLatency.preparation, 'gauge', 'ms');
+        }
+        
+        if (stagesLatency.baking) {
+          metrics.pizza_baking_latency += stagesLatency.baking;
+          sendMetricToGrafana('pizza_baking_latency', stagesLatency.baking, 'gauge', 'ms');
+        }
+        
+        if (stagesLatency.packaging) {
+          metrics.pizza_packaging_latency += stagesLatency.packaging;
+          sendMetricToGrafana('pizza_packaging_latency', stagesLatency.packaging, 'gauge', 'ms');
+        }
+        
+        if (stagesLatency.payment) {
+          metrics.pizza_payment_processing_latency += stagesLatency.payment;
+          sendMetricToGrafana('pizza_payment_processing_latency', stagesLatency.payment, 'gauge', 'ms');
+        }
+      }
     } else {
       
       metrics.pizza_sales_failures++;
       metrics.current_minute_pizza_failures++;
       console.log('[Metrics] Recorded pizza order failure');
-    }
-    
-    
-    if (duration > 0) {
-      sendMetricToGrafana('pizza_creation_latency', duration, 'gauge', 'ms');
+      
+      // Also track latency for failed orders if available
+      if (duration > 0) {
+        sendMetricToGrafana('pizza_failed_order_latency', duration, 'gauge', 'ms');
+      }
     }
   } catch (error) {
     console.error('[Metrics] Error recording pizza sale:', error);
@@ -335,6 +414,12 @@ setInterval(() => {
   sendMetricToGrafana('pizza_sales_per_minute', metrics.pizza_sales_per_minute, 'gauge', 'pizzas/min');
   sendMetricToGrafana('pizza_failures_per_minute', metrics.pizza_failures_per_minute, 'gauge', 'failures/min');
   sendMetricToGrafana('pizza_revenue_per_minute', metrics.pizza_revenue_per_minute, 'gauge', 'BTC/min');
+
+  // Add new pizza latency metrics
+  sendMetricToGrafana('pizza_order_latency_avg', metrics.pizza_latency_avg, 'gauge', 'ms');
+  sendMetricToGrafana('pizza_latency_per_minute', metrics.pizza_latency_per_minute, 'gauge', 'ms');
+  sendMetricToGrafana('pizza_latency_max', metrics.pizza_latency_max, 'gauge', 'ms');
+  sendMetricToGrafana('pizza_latency_min', metrics.pizza_latency_min === Infinity ? 0 : metrics.pizza_latency_min, 'gauge', 'ms');
 
   
   sendMetricToGrafana('active_users', metrics.active_users, 'gauge', 'users');
@@ -531,7 +616,9 @@ function originalSendMetricToGrafana(metricName, metricValue, type, unit) {
         'auth_failure_per_minute',
         'pizza_sales_per_minute',
         'pizza_failures_per_minute',
-        'pizza_revenue_per_minute'
+        'pizza_revenue_per_minute',
+        'pizza_order_latency_avg',
+        'pizza_latency_per_minute'
       ].includes(metricName);
       
       if (!response.ok) {
@@ -564,15 +651,12 @@ const requestTracker = (req, res, next) => {
   try {
     const start = Date.now();
     
-    
+    // Increment total requests
     metrics.requests++;
     metrics.current_minute_requests++;
     
-    
+    // Update method-specific counters - Fixed to use explicit properties
     const method = req.method.toLowerCase();
-    metrics[`${method}_requests`] = (metrics[`${method}_requests`] || 0) + 1;
-    
-    
     switch (method) {
       case 'get':
         metrics.get_requests++;
@@ -594,11 +678,11 @@ const requestTracker = (req, res, next) => {
         console.log(`[Metrics] Unknown HTTP method: ${req.method}`);
     }
     
-    
+    // Track endpoints
     const endpoint = `${req.method} ${req.path}`;
     metrics.endpoints[endpoint] = (metrics.endpoints[endpoint] || 0) + 1;
     
-    
+    // Record user activity
     try {
       const token = readAuthToken(req);
       if (token) {
@@ -608,30 +692,26 @@ const requestTracker = (req, res, next) => {
       console.error('[Metrics] Error recording user activity:', activityError);
     }
     
-    
+    // Track response
     const originalEnd = res.end;
     
-    
-    
     res.end = function(...args) {
-  try {
-    
-    const duration = Date.now() - start;
-    
-
-    metrics.latency += duration;
-    
-
-    sendMetricToGrafana('request_latency', duration, 'gauge', 'ms');
-    
-
-  } catch (error) {
-    console.error('[Metrics] Error in response end handler:', error);
-  }
-  
-
-  return originalEnd.apply(this, args);
-};
+      try {
+        // Calculate request duration
+        const duration = Date.now() - start;
+        
+        // Update latency metrics
+        metrics.latency += duration;
+        
+        // Send latency metric to Grafana
+        sendMetricToGrafana('request_latency', duration, 'gauge', 'ms');
+      } catch (error) {
+        console.error('[Metrics] Error in response end handler:', error);
+      }
+      
+      // Call the original end method
+      return originalEnd.apply(this, args);
+    };
     
     next();
   } catch (error) {
@@ -804,7 +884,18 @@ const getMetrics = () => {
       salesPerMinute: metrics.pizza_sales_per_minute,
       failuresPerMinute: metrics.pizza_failures_per_minute,
       revenuePerMinute: metrics.pizza_revenue_per_minute.toFixed(8) + ' BTC/min',
-      successRate: pizzaSuccessRate.toFixed(2) + '%'
+      successRate: pizzaSuccessRate.toFixed(2) + '%',
+      // Add latency metrics
+      avgLatency: metrics.pizza_latency_avg.toFixed(2) + 'ms',
+      maxLatency: metrics.pizza_latency_max + 'ms',
+      minLatency: (metrics.pizza_latency_min === Infinity ? 0 : metrics.pizza_latency_min) + 'ms',
+      latencyPerMinute: metrics.pizza_latency_per_minute + 'ms',
+      processingStages: {
+        preparation: metrics.pizza_preparation_latency > 0 ? (metrics.pizza_preparation_latency / metrics.pizza_latency_count).toFixed(2) + 'ms' : '0ms',
+        baking: metrics.pizza_baking_latency > 0 ? (metrics.pizza_baking_latency / metrics.pizza_latency_count).toFixed(2) + 'ms' : '0ms',
+        packaging: metrics.pizza_packaging_latency > 0 ? (metrics.pizza_packaging_latency / metrics.pizza_latency_count).toFixed(2) + 'ms' : '0ms',
+        payment: metrics.pizza_payment_processing_latency > 0 ? (metrics.pizza_payment_processing_latency / metrics.pizza_latency_count).toFixed(2) + 'ms' : '0ms'
+      }
     },
     database: {
       totalQueries: metrics.dbQueries,
@@ -851,7 +942,6 @@ function formatUptime(seconds) {
 }
 
 
-console.log('[Metrics] Metrics system initialized');
 console.log('[Metrics] Metrics system initialized');
 
 module.exports = {
