@@ -154,7 +154,7 @@ function calculateRequestsPerMinute() {
     metrics.current_minute_pizza_sales = 0;
   }
   
-  if (elapsedMs >= 5000) {
+  if (elapsedMs >= 30000) {
     
     const minuteRatio = 60000 / elapsedMs;
     
@@ -193,7 +193,7 @@ function calculateRequestsPerMinute() {
     metrics.current_minute_auth_attempts = 0;
     metrics.current_minute_auth_success = 0;
     metrics.current_minute_auth_failure = 0;
-    // metrics.current_minute_pizza_sales = 0;
+    metrics.current_minute_pizza_sales = 0;
     metrics.current_minute_pizza_failures = 0;
     metrics.current_minute_pizza_revenue = 0;
     metrics.current_minute_pizza_latency = 0;
