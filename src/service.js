@@ -7,8 +7,19 @@ const metrics = require('./metrics');
 const version = require('./version.json');
 const { trackAuthSuccess, trackTokenValidation, trackAuth} = require('./authMiddleware');
 const config = require('./config.js');
+const { Role } = require('../database/database.js');
 require('./database/databaseWrapper');
 const logger = require('./logger.js');
+
+const asyncHandler = require('express-async-handler');
+
+class StatusCodeError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+    this.name = 'StatusCodeError';
+  }
+}
 
 
 const app = express();
