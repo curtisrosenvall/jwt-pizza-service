@@ -4,7 +4,7 @@ const os = require('os');
 
 const metrics = {
   
-  requests: 0,
+  // requests: 0,
   latency: 0,
   statusCodes: {},
   endpoints: {},
@@ -45,6 +45,7 @@ const metrics = {
   pizza_sales_per_minute: 0,
   pizza_failures_per_minute: 0,
   pizza_revenue_per_minute: 0,
+  total_pizzas_last_order: 0,
   
   
   current_minute_pizza_sales: 0,
@@ -154,7 +155,7 @@ function calculateRequestsPerMinute() {
     metrics.current_minute_pizza_sales = 0;
   }
   
-  if (elapsedMs >= 30000) {
+  if (elapsedMs >= 5000) {
     
     const minuteRatio = 60000 / elapsedMs;
     
@@ -259,6 +260,7 @@ function recordPizzaSale(items, success = true, duration = 0, stagesLatency = {}
       return;
     }
     
+
     
     recentOrders.set(orderId, Date.now());
     
@@ -280,6 +282,8 @@ function recordPizzaSale(items, success = true, duration = 0, stagesLatency = {}
       metrics.pizza_sales += pizzaCount;
       metrics.current_minute_pizza_sales += pizzaCount;
       
+      metrics.total_pizzas_last_order = pizzaCount;
+      sendMetricToGrafana('total_pizzas_last_order', pizzaCount, 'gauge', 'pizzas');
       
       const revenue = orderItems.reduce((total, item) => total + (parseFloat(item.price) || 0), 0);
       metrics.pizza_revenue += revenue;
@@ -396,7 +400,7 @@ setInterval(() => {
   sendMetricToGrafana('memory', memoryValue, 'gauge', '%');
 
   
-  sendMetricToGrafana('requests', metrics.requests, 'sum', '1');
+  // sendMetricToGrafana('requests', metrics.requests, 'sum', '1');
 
   
   sendMetricToGrafana('get_requests', metrics.get_requests || 0, 'sum', '1');
@@ -426,6 +430,7 @@ setInterval(() => {
   sendMetricToGrafana('pizza_latency_per_minute', metrics.pizza_latency_per_minute, 'gauge', 'ms');
   sendMetricToGrafana('pizza_latency_max', metrics.pizza_latency_max, 'gauge', 'ms');
   sendMetricToGrafana('pizza_latency_min', metrics.pizza_latency_min === Infinity ? 0 : metrics.pizza_latency_min, 'gauge', 'ms');
+  sendMetricToGrafana('total_pizzas_last_order', metrics.total_pizzas_last_order, 'gauge', 'pizzas');
 
   
   sendMetricToGrafana('active_users', metrics.active_users, 'gauge', 'users');
@@ -658,7 +663,7 @@ const requestTracker = (req, res, next) => {
     const start = Date.now();
     
     // Increment total requests
-    metrics.requests++;
+    // metrics.requests++;
     metrics.current_minute_requests++;
     
     // Update method-specific counters - Fixed to use explicit properties
@@ -854,7 +859,7 @@ const getMetrics = () => {
       uptime: formatUptime(process.uptime())
     },
     http: {
-      totalRequests: metrics.requests,
+      // totalRequests: metrics.requests,
       requestsPerMinute: metrics.requests_per_minute,
       errors: metrics.errors,
       errorRate: errorRate.toFixed(2) + '%',
