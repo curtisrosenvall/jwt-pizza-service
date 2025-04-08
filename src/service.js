@@ -7,7 +7,7 @@ const metrics = require('./metrics');
 const version = require('./version.json');
 const { trackAuthSuccess, trackTokenValidation, trackAuth} = require('./authMiddleware');
 const config = require('./config.js');
-const { Role } = require('../database/database.js');
+const { Role } = require('./database/database.js');
 require('./database/databaseWrapper');
 const logger = require('./logger.js');
 
