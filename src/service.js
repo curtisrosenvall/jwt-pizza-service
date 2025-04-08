@@ -7,19 +7,19 @@ const metrics = require('./metrics');
 const version = require('./version.json');
 const { trackAuthSuccess, trackTokenValidation, trackAuth} = require('./authMiddleware');
 const config = require('./config.js');
-const { Role } = require('./database/database.js');
+// const { Role } = require('./database/database.js');
 require('./database/databaseWrapper');
 const logger = require('./logger.js');
 
-const asyncHandler = require('express-async-handler');
+// const asyncHandler = require('express-async-handler');
 
-class StatusCodeError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = 'StatusCodeError';
-  }
-}
+// class StatusCodeError extends Error {
+//   constructor(message, statusCode) {
+//     super(message);
+//     this.statusCode = statusCode;
+//     this.name = 'StatusCodeError';
+//   }
+// }
 
 
 const app = express();
@@ -52,25 +52,25 @@ app.use((req, res, next) => {
 });
 
 
-let enableChaos = false;
-orderRouter.put(
-  '/chaos/:state',
-  authRouter.authenticateToken,
-  asyncHandler(async (req, res) => {
-    if (req.user.isRole(Role.Admin)) {
-      enableChaos = req.params.state === 'true';
-    }
+// let enableChaos = false;
+// orderRouter.put(
+//   '/chaos/:state',
+//   authRouter.authenticateToken,
+//   asyncHandler(async (req, res) => {
+//     if (req.user.isRole(Role.Admin)) {
+//       enableChaos = req.params.state === 'true';
+//     }
 
-    res.json({ chaos: enableChaos });
-  })
-);
+//     res.json({ chaos: enableChaos });
+//   })
+// );
 
-orderRouter.post('/', (req, res, next) => {
-  if (enableChaos && Math.random() < 0.5) {
-    throw new StatusCodeError('Chaos monkey', 500);
-  }
-  next();
-});
+// orderRouter.post('/', (req, res, next) => {
+//   if (enableChaos && Math.random() < 0.5) {
+//     throw new StatusCodeError('Chaos monkey', 500);
+//   }
+//   next();
+// });
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
 
