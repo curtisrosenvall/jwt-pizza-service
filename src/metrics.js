@@ -22,7 +22,7 @@ const metrics = {
   active_user_sessions: new Map(), 
   
   
-  auth_attempts: 0,
+  // auth_attempts: 0,
   auth_success: 0,
   auth_failure: 0,
   
@@ -229,7 +229,7 @@ function calculateRequestsPerMinute() {
 function recordAuthAttempt(success) {
   try {
     
-    metrics.auth_attempts++;
+    // metrics.auth_attempts++;
     metrics.current_minute_auth_attempts++;
     
     
