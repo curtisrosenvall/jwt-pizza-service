@@ -1,6 +1,7 @@
 const express = require('express');
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
+const rateLimit = require('express-rate-limit');
 const franchiseRouter = require('./routes/franchiseRouter.js');
 const healthRouter = require('./routes/healthRouter.js');
 const metrics = require('./metrics');
@@ -11,19 +12,20 @@ const config = require('./config.js');
 require('./database/databaseWrapper');
 const logger = require('./logger.js');
 
-// const asyncHandler = require('express-async-handler');
-
-// class StatusCodeError extends Error {
-//   constructor(message, statusCode) {
-//     super(message);
-//     this.statusCode = statusCode;
-//     this.name = 'StatusCodeError';
-//   }
-// }
-
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    message: 'Too many login attempts, please try again after 15 minutes'
+  },
+  skipSuccessfulRequests: false, // Count all requests against the rate limit
+});
 
 const app = express();
 
+app.use('/api/auth', authLimiter);
 app.use(metrics.requestTracker);
 
 app.use(trackAuth);
@@ -52,25 +54,6 @@ app.use((req, res, next) => {
 });
 
 
-// let enableChaos = false;
-// orderRouter.put(
-//   '/chaos/:state',
-//   authRouter.authenticateToken,
-//   asyncHandler(async (req, res) => {
-//     if (req.user.isRole(Role.Admin)) {
-//       enableChaos = req.params.state === 'true';
-//     }
-
-//     res.json({ chaos: enableChaos });
-//   })
-// );
-
-// orderRouter.post('/', (req, res, next) => {
-//   if (enableChaos && Math.random() < 0.5) {
-//     throw new StatusCodeError('Chaos monkey', 500);
-//   }
-//   next();
-// });
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
 
